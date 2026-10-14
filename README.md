@@ -78,27 +78,21 @@ expected layout.
 ```bat
 cd app
 py -3 -m pip install -r requirements_dev.txt
-py -3 -m pytest tests\test_cheque_documents187.py -q
+py -3 -m pytest tests	est_cheque_documents187.py -q
 ```
 
-The suite has 166 test files. Most use a temporary database. Some tests read the
-Telegram and AI settings and need a local `secrets.local.json` (copy the example and
-fill in placeholder values); without it they fail with a clear message.
+Results of a full run of this release on a clean checkout (166 test files, Windows, no `secrets.local.json`):
 
-On a clean checkout, these tests fail:
+- **138 files pass** without failures. Some skip tests that need private data (see below).
+- **24 files have failing tests.** On the code before this release, each of these files has the same number of failures, so they are not new. The author's list is in [`app/tests/known_failures187.txt`](app/tests/known_failures187.txt).
+- **4 files stop during collection** because they need `secrets.local.json`: `test_stage18_7_calendar_routing.py`, `test_stage18_7_documents.py`, `test_stage18_7_inventory.py` and `test_telegram_album_flush.py`.
+- **Tests that need the private reference workbook** (`phase_budget_current.xlsx`) are skipped here, and the skip message says why. Two of them in `test_v18_core.py` also fail on the code before this release, so skipping them hides a real failure.
 
-- `tests/test_ai_parser_note_type.py`: needs `secrets.local.json` (see above).
-- `tests/test_cheque_launcher_flow187.py::test_picker_shows_purpose_amount_due_date_and_receiver_in_persian_digits`: known failure in the author's notes.
-- `tests/test_stage18_2_regression.py::test_v182_cash_wizard_step_contract`: fails on the code before this release too.
+Tests that need `secrets.local.json` fail with a clear message unless you copy `app/secrets.local.example.json` to `app/secrets.local.json` and fill in placeholder values.
 
-A full run of every test file, including the Tk ones, has not been completed yet.
-Tests that open Tk windows need a desktop session.
+Tests that open Tk windows need a desktop session. Running the tests from `app/` can create `app/data/` (for example `stage4_test.sqlite3`). That folder is ignored by Git; delete it after a run.
 
-Running the tests from `app/` can create `app/data/` (for example
-`stage4_test.sqlite3`). That folder is ignored by Git; delete it after a run.
-
-`app/tests/conftest.py` turns an unanswered dialog into a test failure instead
-of a hang.
+`app/tests/conftest.py` turns an unanswered dialog into a test failure instead of a hang.
 
 ## Repository layout
 

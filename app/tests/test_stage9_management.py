@@ -39,6 +39,7 @@ class Stage9ManagementTests(unittest.TestCase):
         self.svc.loans.pay_installment(ins[0]['loan_installment_id'],amount=10_000_000,paid_date_shamsi='1405/06/20')
         self.assertEqual(self.db.cash_balance(),970_000_000)
 
+    @unittest.skipUnless((Path(__file__).resolve().parents[1] / "phase_budget_current.xlsx").exists(), 'needs the private 32-phase workbook phase_budget_current.xlsx, which is not shipped in this repository')
     def test_expense_classification_and_report_forecast(self):
         r,a=self.post_expense(); exp_id=self.db.get_financial_posting(r.pending_id)['expense_id']
         phase=[p for p in self.svc.budget.list_phases() if 'اسکلت' in p['name']][0]; act=[a for a in self.svc.budget.list_activities(phase['phase_id']) if a['name'].strip()=='بتن'][0]
