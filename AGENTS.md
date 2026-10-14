@@ -45,7 +45,20 @@ section 4 (financial invariants) and section 6 (security) before any change.
 - Multi-line text the user types (`tk.Text`) is built with
   `rtl_text187.install(widget)`.
 
+## Module IDs and documents
+
+- Every new file or part of a module gets an ID in `app/docs/architecture/MODULE_REGISTRY.md` (for example `WR-07`, `DB-02`). Put the ID in the file's docstring and in commit messages.
+- A change that adds, removes or changes a module, a file layout, a contract or a decision must update in the same commit: `MODULE_REGISTRY.md`, `ARCHITECTURE.md`, the relevant file in `app/docs/contracts/`, and a new ADR in `app/docs/decisions/` when a decision changes. Do not delete old ADRs; mark them as superseded.
+- User-visible changes go under `Unreleased` in `CHANGELOG.md`.
+- Web receipt code (`app/web_receipts/`) must not import the Tk UI, the legacy dashboard or Telegram modules. Only `legacy_queue.py` and `import_inbox.py` may import `finance_db`. The guard tests in `app/tests/test_web_receipt_import.py` enforce this.
+- Database changes are additive: new columns or indexes with defaults. A table rebuild needs its own ADR and a rehearsal on a copy of the real database first.
+
+## Branches in this repository
+
+- `main` is the public snapshot. Feature work for the new version uses `feature/<name>` branches.
+- The private repository is the source of truth for the live project. Changes made here are not copied back to the private checkout automatically.
+
 ## Before you finish
 
-State what changed, which tests you ran and their result, and anything you did
-not verify.
+State what changed, which module IDs it touches, which tests you ran and their result,
+and anything you did not verify.

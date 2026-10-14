@@ -90,7 +90,7 @@
         send.disabled = true;
         say('در حال ارسال…');
 
-        fetch('/api/receipts', {
+        fetch('/api/v1/receipts', {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + code.value.trim(),

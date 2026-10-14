@@ -1,4 +1,4 @@
-"""Local HTTP(S) server for the web receipt page.
+"""WR-02: local HTTP(S) server for the web receipt page.
 
 The server runs inside the desktop application's process. It accepts photos only
 from a sender who has the pairing token. Photos and captions go to the inbox
@@ -9,7 +9,7 @@ Routes:
     GET  /sw.js               service worker (app shell only, no API caching)
     GET  /manifest.webmanifest
     GET  /icon-512.png
-    POST /api/receipts        body = image bytes; headers: Authorization: Bearer <token>,
+    POST /api/v1/receipts     body = image bytes; headers: Authorization: Bearer <token>,
                               X-Receipt-Caption: <percent-encoded UTF-8 caption>
 """
 
@@ -80,7 +80,7 @@ class ReceiptHandler(BaseHTTPRequestHandler):
         self._send_static(*route)
 
     def do_POST(self):  # noqa: N802 - base class name
-        if self.path.split("?", 1)[0] != "/api/receipts":
+        if self.path.split("?", 1)[0] != "/api/v1/receipts":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
 

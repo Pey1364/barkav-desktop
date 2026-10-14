@@ -1,4 +1,4 @@
-"""Receipt inbox for the web upload channel.
+"""WR-01: receipt inbox for the web upload channel.
 
 Each uploaded photo is decoded, checked and re-encoded as JPEG. Re-encoding drops
 EXIF metadata, including GPS coordinates. The photo and its caption are written to
@@ -20,11 +20,13 @@ from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
+CONTRACT_VERSION = 1  # RECEIPT_INBOX_V1 contract, see docs/contracts/RECEIPT_INBOX_V1.md
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_CAPTION_CHARS = 1000
 MAX_EDGE_PX = 2400
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 STATE_RECEIVED = "RECEIVED"
+STATE_IMPORTED = "IMPORTED"
 
 
 class ReceiptRejected(ValueError):
@@ -84,6 +86,7 @@ def store_receipt(inbox_dir: Path, image_bytes: bytes, caption: str) -> StoredRe
     (folder / "receipt.jpg").write_bytes(jpeg)
 
     meta = {
+        "schema_version": CONTRACT_VERSION,
         "receipt_id": receipt_id,
         "caption": caption,
         "received_at": now.isoformat(timespec="seconds"),
@@ -109,3 +112,13 @@ def list_received(inbox_dir: Path) -> list[dict[str, Any]]:
             meta["folder"] = str(folder)
             items.append(meta)
     return items
+
+
+def mark_imported(folder: Path, pending_id: str) -> None:
+    """Record that the receipt reached the review queue. Keeps the photo and caption."""
+    meta_path = Path(folder) / "meta.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta["state"] = STATE_IMPORTED
+    meta["pending_id"] = pending_id
+    meta["imported_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")

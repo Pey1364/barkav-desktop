@@ -89,6 +89,12 @@ Open the address shown on the phone, trust the self-signed certificate once, and
 enter the pairing code. The inbox and the certificate are in `app/data/web_receipts`,
 which Git ignores. Importing inbox items into the approval queue is not built yet.
 
+## Documentation
+
+- [Architecture map](app/docs/architecture/ARCHITECTURE.md) and [module registry](app/docs/architecture/MODULE_REGISTRY.md) (numbered modules).
+- [Receipt inbox contract](app/docs/contracts/RECEIPT_INBOX_V1.md) and [architecture decisions](app/docs/decisions/).
+- [Roadmap](ROADMAP.md), [changelog](CHANGELOG.md), [contributing](CONTRIBUTING.md).
+
 ## Tests
 
 ```bat

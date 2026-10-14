@@ -1,4 +1,4 @@
-"""Run the receipt page on the home network: `python -m web_receipts.run_local`.
+"""WR-04: run the receipt page on the home network: `python -m web_receipts.run_local`.
 
 Prints the address to open on the phone and a new pairing code. The code changes
 each time the server starts. Stop the server with Ctrl+C.

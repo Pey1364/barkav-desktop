@@ -1,4 +1,4 @@
-"""Self-signed HTTPS certificate for the local receipt page.
+"""WR-03: self-signed HTTPS certificate for the local receipt page.
 
 A phone browser only grants camera access and allows installing a web app on a
 secure origin. A self-signed certificate is enough for a home network if the

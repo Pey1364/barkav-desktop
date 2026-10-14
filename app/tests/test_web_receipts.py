@@ -1,4 +1,4 @@
-"""Web receipt channel: storage rules, pairing, and the HTTP round trip.
+"""WR-01 to WR-05: web receipt storage rules, pairing, and the HTTP round trip.
 
 Every test writes only into its own temporary folder. Photos here are generated in
 memory, not real receipts.
@@ -151,7 +151,7 @@ def running_server(tmp_path: Path):
 
 
 def _post(base: str, body: bytes, headers: dict[str, str]):
-    request = urllib.request.Request(f"{base}/api/receipts", data=body, method="POST", headers=headers)
+    request = urllib.request.Request(f"{base}/api/v1/receipts", data=body, method="POST", headers=headers)
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             return response.status, json.loads(response.read().decode("utf-8"))

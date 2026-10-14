@@ -1,4 +1,4 @@
-// Caches only the page shell so the form opens offline. Receipt uploads and any
+// WR-05: caches only the page shell so the form opens offline. Receipt uploads and any
 // /api/ request always go to the network, and are never cached or replayed.
 const SHELL = 'barkav-receipt-shell-v1';
 const SHELL_FILES = ['/', '/manifest.webmanifest', '/icon-512.png'];

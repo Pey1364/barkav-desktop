@@ -35,6 +35,11 @@ def _id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:12].upper()}"
 
 
+# Telegram chat id used for pending rows that come from the web receipt channel (ADR-0001).
+# No real Telegram chat has id 0, so updates keyed by chat id never touch these rows.
+WEB_RECEIPT_CHAT_ID = 0
+
+
 @dataclass(frozen=True)
 class FinancialSnapshot:
     cash_balance: int
@@ -633,6 +638,18 @@ class FinanceDB:
                     ON posting_revisions(pending_id, status, created_at);
                 """
             )
+            # ADR-0001: pending rows from the web receipt channel. Telegram rows keep source='TELEGRAM'
+            # and no external reference. Web rows use chat 0 and a negative message id (see create_pending_from_web).
+            pending_cols = {r[1] for r in con.execute("PRAGMA table_info(pending_items)").fetchall()}
+            if "source" not in pending_cols:
+                con.execute("ALTER TABLE pending_items ADD COLUMN source TEXT NOT NULL DEFAULT 'TELEGRAM'")
+            if "external_ref" not in pending_cols:
+                con.execute("ALTER TABLE pending_items ADD COLUMN external_ref TEXT")
+            con.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_items_external_ref "
+                "ON pending_items(external_ref) WHERE external_ref IS NOT NULL"
+            )
+
             # Lightweight in-place migration from Stage 4 databases.
             columns = {r[1] for r in con.execute("PRAGMA table_info(financial_postings)").fetchall()}
             if "status" not in columns:
@@ -1096,6 +1113,58 @@ class FinanceDB:
                      json.dumps(payload, ensure_ascii=False), confidence, status, now, now),
                 )
             return pending_id
+
+    def create_pending_from_web(self, *, receipt_id: str, caption: str, received_at: str,
+                                image_path: str, image_sha256: str) -> tuple[str, bool]:
+        """Add one web receipt to the review queue. Returns (pending_id, created).
+
+        Idempotent on receipt_id: a second call for the same receipt returns the existing
+        pending_id with created=False. The row is pending review only; no financial row is
+        written here (ADR-0001, red line in app/AGENTS.md section 4).
+        """
+        now = _now()
+        payload = {
+            "detected_type": "UNKNOWN",
+            "source": "WEB",
+            "receipt_id": receipt_id,
+            "caption": caption,
+            "received_at": received_at,
+        }
+        with self.tx() as con:
+            old = con.execute(
+                "SELECT pending_id FROM pending_items WHERE source='WEB' AND external_ref=?",
+                (receipt_id,),
+            ).fetchone()
+            if old:
+                return old["pending_id"], False
+            next_message_id = con.execute(
+                "SELECT COALESCE(MIN(telegram_message_id), 0) - 1 AS n FROM pending_items WHERE telegram_chat_id=?",
+                (WEB_RECEIPT_CHAT_ID,),
+            ).fetchone()["n"]
+            pending_id = _id("PEN")
+            con.execute(
+                """INSERT INTO pending_items(
+                    pending_id,telegram_chat_id,telegram_message_id,detected_type,payload_json,
+                    confidence,status,created_at,updated_at,source,external_ref
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (pending_id, WEB_RECEIPT_CHAT_ID, int(next_message_id), "UNKNOWN",
+                 json.dumps(payload, ensure_ascii=False), None, "NEEDS_REVIEW", now, now, "WEB", receipt_id),
+            )
+            con.execute(
+                """INSERT INTO receipt_analyses(
+                    analysis_id,pending_id,provider,document_type,image_path,image_sha256,
+                    ocr_text,status,created_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                (_id("ANA"), pending_id, "WEB_UPLOAD", "OTHER", image_path, image_sha256,
+                 "", "NEEDS_REVIEW", now, now),
+            )
+            con.execute(
+                """INSERT INTO attachments(
+                    attachment_id,entity_type,entity_id,document_type,local_path,mime_type,created_at
+                ) VALUES(?,?,?,?,?,?,?)""",
+                (_id("ATT"), "PENDING", pending_id, "OTHER", image_path, "image/jpeg", now),
+            )
+        return pending_id, True
 
     def get_pending_item(self, pending_id: str) -> Optional[dict[str, Any]]:
         with self.read() as con:
