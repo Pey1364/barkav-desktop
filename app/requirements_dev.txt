@@ -1,0 +1,6 @@
+# Extra dependencies needed to run the test suite (not part of the shipped
+# app - see requirements_18_7_1.txt for that). Install both when setting up
+# a fresh machine.
+pytest
+lxml==6.1.1  # Preserve Excel namespace compatibility in the reference workbook tool.
+pypdf

@@ -1,0 +1,12 @@
+BARKAV 17.4 — BUILD TEST RESULTS
+Date: 2026-08-15
+
+PASS: Python compilation for dashboard_stage17.py, launcher_stage17.py, finance_db.py, development_package_v174.py.
+PASS: Development Package headless build.
+PASS: Development Package includes cumulative handoff + checkpoints.
+PASS: Development Package security check: no secrets.local.json, no data/, no SQLite DB.
+PASS: Selected cheque/approval/history regression tests: 18 passed.
+
+NOTE:
+- Real Telegram/Gemini and real-document UI testing must be performed on the user's Windows environment.
+- Full approved UI/reference visual parity remains a known outstanding item and is not claimed as fixed in 17.4.

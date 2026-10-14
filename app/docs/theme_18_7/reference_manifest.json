@@ -1,0 +1,35 @@
+{
+  "purpose": "Immutable visual references for the future BARKAV Theme 2 integration",
+  "reference_count": 16,
+  "ignore_reference_titles": true,
+  "source_version_text_is_not_a_requirement": true,
+  "reference_dimensions": [2560, 1440],
+  "pairs": [
+    {"dark": "1.png", "light": "2.png", "surface": "dashboard and shell"},
+    {"dark": "3.png", "light": "4.png", "surface": "progress and charts"},
+    {"dark": "5.png", "light": "6.png", "surface": "dense reporting table"},
+    {"dark": "7.png", "light": "8.png", "surface": "sales and action table"},
+    {"dark": "9.png", "light": "10.png", "surface": "manager account and KPIs"},
+    {"dark": "11.png", "light": "12.png", "surface": "data entry and receipt preview"},
+    {"dark": "13.png", "light": "14.png", "surface": "transactions and subtabs"},
+    {"dark": "15.png", "light": "16.png", "surface": "contractor and secondary tables"}
+  ],
+  "sha256": {
+    "1.png": "BA1D0E466B439F566D75AF618DAFB76A21EBC926A5780FE2BD2D29E926848750",
+    "2.png": "D85B9B6F9E8F9F1C4F35D79826820078FC222DB7FDD183B27A259F5CFF9470A1",
+    "3.png": "F9B0EE2BB71B9AC959D44D9A9F50C13518A13510E1FBC9C3CA5D3D701F28ABFF",
+    "4.png": "FCBBC5128F487902C576C04852DA2C1D8B24CAF08EB56D31219BCD58DC5EF90C",
+    "5.png": "85D07F1E74765E7665558DECEEABE29CD7AD082E68F50AF1D8097124159F27D1",
+    "6.png": "58DECAF13B5B1BB0FAFCA66F29EF8560CDD69420ACA2B3777C1D2254CBA55ECD",
+    "7.png": "20FD9EEA839FEF4298C2FDDE1A2715F1E11978A141C39CD4A36B5EF1868BCD2F",
+    "8.png": "F3456F444DC12220E5450FCC6F8050F75A1D91FC0616C74677D3D5A8546D8AE9",
+    "9.png": "977345231FE9626A10EC4DFE3D3CCA6969DAD3A3E1B3F220D81C0F02B8090A0B",
+    "10.png": "3F6C0F73B374AF416BEDF4017214F92884AE1A7A20EB0249761C69000D5DDFB7",
+    "11.png": "3EB5B9ECD4C1BCB75BB0C780E5AD8708D1D1F681ACAF90F1A652A3E1A77B1DA4",
+    "12.png": "EE5CFBD7CE667EBE0B184339AB9AE9184525565724C162DFE6D3C5AC2BB324D7",
+    "13.png": "2D9F544CA48E2E8F9B830B78FF65EBB33AC2176D29F7F05DF786FD1D10E67E3E",
+    "14.png": "438221F052E144E6EF4B61841B7CE25B63A9D6B1BE745E179D85755FF5E2C0BC",
+    "15.png": "11FB7EDDA22C918320029292800A89BD3AA5A2A71FBE6970A84B612BFED24996",
+    "16.png": "4C8C97909544FE4E77895C119FE9CE09100B94AE14CB859208002F91CC88F570"
+  }
+}

@@ -1,0 +1,82 @@
+/* Colours are BARKAV theme 2 (barkav_themes/tokens.py THEME_2_DARK/LIGHT),
+   so the prototype reads as the same product as the Tk window. */
+:root {
+  --bg: #0E141B; --surface: #111820; --panel: #141C25; --raised: #1C242E;
+  --line: #2A3440; --line-soft: #1D252E; --text: #F1F5F9; --muted: #94A3B0;
+  --blue: #3B8FE8; --blue-hover: #52A0F5; --green: #3ACB86; --yellow: #F0B93C;
+  --red: #EC5563; --cyan: #4FD1E0;
+  --radius: 10px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #FCFDFF; --surface: #FAFBFD; --panel: #FFFFFF; --raised: #FFFFFF;
+    --line: #D9DFE6; --line-soft: #EBEFF3; --text: #16212E; --muted: #64748B;
+    --blue: #1668C4; --blue-hover: #0F5AAE; --green: #12855A; --yellow: #A87410;
+    --red: #C4343F; --cyan: #0E8FA5;
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  /* Installed with the 19.1.1 app on this machine; bundling the font file
+     is an open packaging decision (see the migration plan). */
+  font-family: Vazirmatn, "Segoe UI", Tahoma, sans-serif;
+  font-size: 14px; line-height: 1.7; letter-spacing: 0;
+}
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  padding: 14px 24px; background: var(--surface);
+  border-block-end: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-name { font-weight: 800; font-size: 18px; letter-spacing: 0; direction: ltr; unicode-bidi: isolate; }
+.badge {
+  font-size: 12px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.project { flex: 1; min-width: 0; }
+.project h1 { margin: 0; font-size: 18px; font-weight: 700; }
+.project p { margin: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actions { display: flex; align-items: center; gap: 12px; }
+button {
+  font: inherit; color: #fff; background: var(--blue); border: 0;
+  padding: 6px 18px; border-radius: 8px; cursor: pointer;
+}
+button:hover { background: var(--blue-hover); }
+button:disabled { opacity: .55; cursor: default; }
+
+main { padding: 20px 24px; }
+.status { padding: 12px 16px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); }
+.status.error { border-color: var(--red); }
+.status:empty { display: none; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-block-end: 16px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.kpi .label { color: var(--muted); font-size: 12px; }
+.kpi .value { font-size: 22px; font-weight: 700; margin-block-start: 4px; }
+.kpi .unit { color: var(--muted); font-size: 12px; font-weight: 400; margin-inline-start: 4px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; }
+.card h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card dl { margin: 0; display: grid; grid-template-columns: 1fr auto; row-gap: 4px; column-gap: 16px; }
+.card dt { color: var(--muted); }
+.card dd { margin: 0; font-weight: 600; text-align: end; }
+.card dd, .kpi .value { font-variant-numeric: tabular-nums; }
+.card .separated { border-block-start: 1px solid var(--line-soft); padding-block-start: 6px; margin-block-start: 4px; }
+
+.num { unicode-bidi: isolate; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.warn-text { color: var(--yellow); }
+.tag { font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tag.warn { color: var(--yellow); }
+
+footer { padding: 0 24px 18px; }

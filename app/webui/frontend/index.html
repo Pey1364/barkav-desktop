@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Everything is local; the page never talks to the network, only to
+       window.pywebview.api (injected by pywebview, not fetched). -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>BARKAV — داشبورد</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">BARKAV</span>
+      <span class="badge" title="این نمونه فقط از یک کپی لحظه‌ای دیتابیس می‌خواند و چیزی ثبت نمی‌کند.">فقط‌خواندنی</span>
+    </div>
+    <div class="project">
+      <h1 id="project-name">…</h1>
+      <p id="project-address" class="muted"></p>
+    </div>
+    <div class="actions">
+      <span id="snapshot-time" class="muted small"></span>
+      <button id="refresh" type="button">بروزرسانی</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="status" class="status" role="status" aria-live="polite">در حال خواندن داده‌ها…</div>
+
+    <section id="content" hidden>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="grid">
+        <article class="card" id="card-sales"><h2>فروش و مطالبات</h2><dl></dl></article>
+        <article class="card" id="card-liquidity">
+          <h2>نقدینگی ۳۰ روز آینده</h2>
+          <dl></dl>
+        </article>
+        <article class="card" id="card-loans"><h2>تسهیلات</h2><dl></dl></article>
+        <article class="card" id="card-cheques"><h2>چک‌ها</h2><dl></dl></article>
+        <article class="card" id="card-pending"><h2>ثبت دیتا</h2><dl></dl></article>
+        <article class="card" id="card-health"><h2>وضعیت داده</h2><dl></dl></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="muted small" id="footer"></footer>
+  <script src="app.js"></script>
+</body>
+</html>

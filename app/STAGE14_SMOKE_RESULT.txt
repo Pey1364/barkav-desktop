@@ -1,0 +1,5 @@
+STAGE 14 SMOKE TEST: OK
+receipt_pending_to_posted=yes
+construction=120,000,000
+manager_fee=12,000,000
+gui_telegram_outbox=queued

@@ -1,0 +1,33 @@
+BARKAV 18.2 — Pre-release Test Results
+Date: 2026-08-19
+
+1) Python compile
+PASS: dashboard_stage18_2.py
+PASS: launcher_stage18_2.py
+PASS: inherited 18.1 receipt/Telegram stack compiles under regression suite.
+
+2) Unit / regression suite
+PASS: 131 passed / 5 UI tests skipped in normal headless-disabled run.
+pytest.ini now restricts default discovery to active tests/ and prevents obsolete historical stage smoke files from causing false schema failures.
+
+3) Full GUI suite under Xvfb
+PASS: 136 passed / 0 failed with BARKAV_RUN_UI_TESTS=1.
+
+4) New V18.2 Wizard / Editor tests
+PASS: common date and amount survive all Wizard page rebuilds.
+PASS: partner payer = سایر exposes manual payer field.
+PASS: partner kind defaults to تزریق پول instead of obsolete قطعی.
+PASS: قرض enables loan duration/return date and auto-calculates return date.
+PASS: selected loan data persists to later installment Wizard steps.
+PASS: remaining installment count is calculated using prior-step payload.
+PASS: full editor reopens custom partner as سایر + manual name and keeps conditional fields synchronized.
+PASS: Pending with no initial date no longer crashes Wizard construction.
+
+5) Release wiring
+PASS: active version is 18.2.
+PASS: BARKAV_18.2.bat targets launcher_stage18_2.py.
+PASS: CREATE_SHORTCUT.bat targets BARKAV 18.2 and assets/BARKAV.ico.
+PASS: Development Package exporter includes V18.2 source/test context.
+
+LIMITATION
+No live external Telegram/Gemini network test was performed in the build environment. Final connectivity must be smoke-tested on the user's Windows machine with the actual secrets.local.json and active Telegram group.

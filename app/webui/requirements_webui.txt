@@ -1,0 +1,12 @@
+# pywebview prototype only - NOT part of the 19.1.1 app's requirements.
+# Installed into the research worktree's own venv (.venv-webui, created with
+# --system-site-packages so the app's existing packages stay visible).
+# Versions below are exactly what `pip install pywebview` resolved on
+# 2026-09-26 (Windows 10 19045, Python 3.13).
+pywebview==6.2.1
+pythonnet==3.1.0
+clr_loader==0.3.1
+bottle==0.13.4
+proxy_tools==0.1.0
+# Runtime (not pip): Microsoft Edge WebView2 Runtime, used by pywebview's
+# "edgechromium" backend on Windows.

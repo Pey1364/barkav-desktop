@@ -1,0 +1,15 @@
+BARKAV 18.7 verification plan
+=============================
+
+Automated
+1. Run tests/test_stage18_7_word_and_theme.py.
+2. Run tests/test_stage18_7_ui.py with BARKAV_RUN_UI_TESTS=1 on Windows.
+3. Run inherited 18.6 regression tests from the clean 18.7 source.
+4. Run the complete suite with a basetemp inside the source tree.
+
+Manual Windows acceptance still required
+1. Compare Theme 2 Dark/Light against all 16 supplied reference images.
+2. Verify real project data in the calendar and startup reminders.
+3. Save an opened Excel estimate and accept its new-version import.
+4. Verify Telegram online/last-message status with real credentials/network.
+5. Confirm DPI/font/icon rendering on the target monitor.

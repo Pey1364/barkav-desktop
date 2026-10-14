@@ -1,0 +1,4 @@
+STAGE 15 SMOKE TEST: OK
+photo_only_history_import=yes
+vision_provider=yes
+construction=50,000,000

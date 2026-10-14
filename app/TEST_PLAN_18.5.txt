@@ -1,0 +1,31 @@
+BARKAV 18.5 TEST PLAN
+
+AUTOMATED
+1. Run: python -m pytest tests/test_stage18_5_regression.py -q
+2. Run: python -m pytest tests/test_stage18_4_regression.py tests/test_stage18_5_regression.py -q
+3. Run: python -m pytest -q
+4. With a complete Tcl/Tk runtime: set BARKAV_RUN_UI_TESTS=1 and run tests/test_stage18_5_ui.py.
+
+WINDOWS MANUAL ACCEPTANCE
+1. Copy a verified backup of live data and secrets into the clean 18.5 folder.
+2. Start only BARKAV_18.5.bat; confirm no 18.2/18.3 product BAT exists in the extracted folder.
+3. Open the same project twice; confirm the second runner is blocked and only one Telegram bot polls.
+4. Check Dark and Light against the supplied reference at 100%, 125% and 150% DPI.
+5. Confirm BARKAV is larger than its subtitle and the clock/status badges never resize when text changes.
+6. Confirm TGJU refresh occurs after start without freezing the window and the last manual rate survives a failed connection.
+7. Save Persian base fields and verify gross/saleable areas do not gain a zero.
+8. Enter total=6, parking=2, negative=1. Confirm rows are -1, ground, first..fourth and only the first two parking fields are enabled.
+9. Add/edit units, usage, area, storage areas and supplied parking; reopen and verify persistence and unit-list sync.
+10. Save Administrative Follow-up Responsible name/company/phone.
+11. Import Telegram Desktop JSON and ZIP; verify Pending creation and no posting before approval.
+12. Close Wizard into full editor; confirm the editor is in front. Change selection repeatedly; confirm receipt image does not blink.
+13. Drag the Financial Indicators horizontal splitter and resize the main window.
+14. Verify System shows 18.5 and create the 18.5 Desktop shortcut.
+15. Exercise backup/restore, Print/PDF/Excel, live Telegram, live Gemini and a real TGJU connection.
+
+PASS GATE
+- No Critical data-loss/posting issue.
+- No duplicate project runner/bot.
+- Automated suite remains green.
+- Backup restore is proven on a copy.
+- Windows UI and live-service acceptance is signed off.

@@ -1,0 +1,10 @@
+BARKAV 18.0 pre-release validation
+Date: 2026-08-18
+
+- Python compile: PASS (dashboard_stage18, launcher_stage18, v18_store, phase04_v18, finance_db, development_package_v174)
+- Non-UI regression suite: 129 passed, 0 failed
+- V18 Xvfb UI smoke: 1 passed, 0 failed
+- V18 UI smoke covers version/title, System+Settings ordering, 32 phases, Pending extended selection/columns, four-field wizard first page, exact cheque statuses+guarantee, project floor/team settings.
+- Core V18 tests are included in the 129 regression suite and cover schema v13 settlement_mode, returned-settled accounting, guarantee exclusion and Phase04 aggregate formula.
+
+Windows field acceptance remains required.

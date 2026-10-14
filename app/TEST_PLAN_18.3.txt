@@ -1,0 +1,12 @@
+BARKAV 18.3 Test Plan
+=====================
+1. Compile all new/modified V18.3 executable modules.
+2. Run 24 dedicated numbered acceptance tests (one per requested change).
+3. Run full default regression suite.
+4. Run full GUI-enabled suite under Xvfb.
+5. Construct and inspect Dark and Light dashboard visual smoke images.
+6. Build application and Development Package ZIPs.
+7. Extract final application ZIP to a clean folder.
+8. Re-run compile + 24-point acceptance + full default + full GUI suites from the extracted ZIP.
+9. Verify archive contains no secrets.local.json, runtime logs, pycache, or unintended live database changes.
+10. Live Telegram/Gemini/TGJU network acceptance remains for the user's Windows environment.

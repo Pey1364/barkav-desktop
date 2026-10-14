@@ -1,0 +1,5 @@
+Peymaan V2 Stage 9
+Automated unit/integration tests: 80 passed
+Stage 9 smoke test: PASS
+Legacy Stage 8 database migration check: PASS (SQLite integrity OK, schema 7, 30 phases seeded)
+Core areas covered: ledger, revisions, cheques/reminders, Google Sheets idempotency, sales/receivables, dashboard/reconciliation, project archive, phase budget/forecast, loans/installments, loan input parser.

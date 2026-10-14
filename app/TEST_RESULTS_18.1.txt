@@ -1,0 +1,35 @@
+BARKAV 18.1 — Pre-release Test Results
+Date: 2026-08-19
+
+1) Python compile
+PASS: dashboard_stage18_1.py
+PASS: launcher_stage18_1.py
+PASS: receipt_intelligence.py
+PASS: receipt_ai_provider.py
+PASS: telegram_stage15.py
+PASS: v18_store.py
+PASS: development_package_v174.py
+
+2) Unit / regression suite
+127 passed / 0 failed
+Includes existing finance, cheque, sales, loan, receipt, approval, phase-intelligence and multi-cheque tests plus V18.1 receipt retry tests.
+
+3) Receipt intelligence 18.1
+PASS: weak primary Vision result triggers enhanced-image second pass.
+PASS: second pass can recover critical amount without replacing stronger primary fields.
+PASS: transient Vision provider error (503-style) is retried once before fallback.
+PASS: existing test confirms primary Vision receives original archived image.
+
+4) GUI headless smoke (Xvfb)
+PASS: Stage181Dashboard constructs and paints.
+PASS: top-level tabs do not contain Cheques.
+PASS: Cheques are present under Transactions.
+PASS: Reports contain only Financial indices + Phase report at main level; phase report contains Price + Phases.
+PASS: BARKAV.ico exists.
+
+5) Wizard headless smoke
+PASS: changing Title to Income refreshes subtype choices to Loans / Sales / Partners-Loan / Other.
+PASS: selecting Loans and pressing Next advances to loan fields; it does not jump directly to final registration.
+
+LIMITATION
+No live external Telegram/Gemini network test was performed in the build environment. Final connectivity must be smoke-tested on the user's Windows machine with the user's actual secrets.local.json and active Telegram group.

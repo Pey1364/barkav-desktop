@@ -1,0 +1,11 @@
+python-telegram-bot>=20.8,<23
+google-genai
+jdatetime
+gspread>=6.1,<7
+reportlab>=4.0
+arabic-reshaper>=3.0
+python-bidi>=0.4
+Pillow>=10.0
+pytesseract>=0.3.13
+
+openai

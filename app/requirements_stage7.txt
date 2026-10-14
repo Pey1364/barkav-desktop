@@ -1,0 +1,4 @@
+python-telegram-bot>=20.8,<23
+google-genai
+jdatetime
+gspread>=6.1,<7

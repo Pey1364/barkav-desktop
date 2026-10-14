@@ -1,0 +1,4 @@
+# Optional, isolated Windows GUI acceptance dependencies.
+# Install into .venv-gui; these are not application runtime dependencies.
+pywinauto==0.6.9
+Pillow>=10,<13

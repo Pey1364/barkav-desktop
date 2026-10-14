@@ -1,0 +1,6 @@
+BARKAV 18.2 FINAL TEST RESULTS — 2026-08-19
+compileall: PASS
+normal pytest: 141 passed, 19 skipped (GUI opt-in)
+GUI-enabled pytest under Xvfb: 160 passed, 0 failed
+Visual smoke: Dashboard + six visible main tabs, Dark/Light shell checked
+External acceptance: live Telegram/Gemini and actual Windows Persian PDF rendering require target environment

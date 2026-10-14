@@ -1,0 +1,22 @@
+BARKAV 17.0 — Step-by-Step User Validation
+
+Rule: test one step at a time. Do not proceed to the next step until the current observed result is reported.
+
+Planned sequence (for handoff only):
+1. Startup/migration with copied data + secrets.
+2. UI/tab structure and visual baseline.
+3. Telegram bot online + one text Pending.
+4. `350` text convention and timestamp.
+5. Rial bank receipt + caption/evidence.
+6. selection/scroll/preview stability.
+7. receiver/payer autofill.
+8. single cheque.
+9. multi-cheque image.
+10. guarantee cheque.
+11. cheque clearing event matching.
+12. main/sub-phase search.
+13. Excel budget sync + Price/Phase drilldown.
+14. dashboard/report drilldowns and exports.
+15. Contractor-Market module.
+16. historical learning/import.
+17. development package export.

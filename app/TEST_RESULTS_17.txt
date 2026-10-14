@@ -1,0 +1,16 @@
+BARKAV 17.0 — Build Validation
+Date: 2026-08-15
+
+PASS — Python compileall across packaged source.
+PASS — New market_service_v17 SQLite smoke: entity -> contract -> statement -> payment -> balance calculation.
+PASS — historical_learning_v17 SQLite smoke: insert + similarity query.
+PASS — barkav0 historical seed generated and loaded: 1,618 WhatsApp examples.
+PASS — local parser: bare `350` => 350,000 toman.
+PASS — local parser: explicit `350 ریال` => 35 toman (explicit currency overrides chat shorthand).
+PASS — local parser: cheque guarantee marker recognized.
+PASS — local parser: `پاس کردن چک` recognized as cheque-clearing event.
+PASS — Version 17 launcher/source static compilation.
+
+NOT RUN IN BUILD CONTAINER — full Tk GUI + live Telegram + Gemini end-to-end, because this container does not have jdatetime/python-telegram-bot/google-genai/gspread installed and internet package installation is unavailable. These are the first user-side step-by-step validation targets.
+
+IMPORTANT — AI reading quality on real municipality receipts, multi-cheque photos, POS slips and invoices remains an empirical test item. No claim of perfect OCR accuracy is made.

@@ -1,0 +1,4 @@
+STAGE 13 SMOKE TEST: OK
+open_cheques=120,000,000
+historical_pending=1
+empty_phase_visible=yes

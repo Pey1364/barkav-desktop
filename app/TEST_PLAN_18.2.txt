@@ -1,0 +1,36 @@
+BARKAV 18.2 — Acceptance Checklist
+Date: 2026-08-19
+
+A. Startup
+- Run BARKAV_18.2.bat with a copy of live data and real secrets.local.json.
+- Confirm dashboard opens and version shows 18.2.
+- Confirm Desktop shortcut created by CREATE_SHORTCUT.bat opens 18.2.
+
+B. Data Entry / Wizard
+- Open Pending with no date; Wizard must open without crash.
+- Enter date/amount on first page, traverse to final page, go back/forward; values must remain unchanged.
+- Change Title and confirm Type list follows the selected title.
+
+C. Partner / Loan
+- Input > Partners/Loan > payer Other: manual payer field appears.
+- Deposit kind Cash Injection: duration/return date hidden.
+- Deposit kind Loan: duration/return date visible; return date updates from duration.
+- Reopen in Full Form and confirm the same behavior.
+
+D. Installment output
+- Select an existing loan.
+- Later pages must show lender/bank, total principal, installment count and prior paid count.
+- Current paid-count change must update remaining installments.
+
+E. Sale
+- Select existing sale/unit and confirm buyer/payer are carried to the later page.
+- Unit Other must expose sold-area M2 input.
+
+F. Receipt / services
+- Confirm Telegram ready/heartbeat status.
+- Send a real receipt and confirm Pending is created before AI finishes.
+- Confirm Gemini analysis result updates without auto-posting financial data.
+
+G. Regression
+- Default pytest: active suite only.
+- GUI-enabled Xvfb suite: all tests pass in build environment.

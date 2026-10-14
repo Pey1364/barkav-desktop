@@ -1,0 +1,63 @@
+# Local secrets and credentials
+secrets.local.json
+credentials.json
+*.env
+
+# Python caches and test artefacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv-gui/
+
+# Runtime state, locks, flags and logs
+runtime/*
+*.log
+*.lock
+*.flag
+
+# Local databases and generated receipt archives
+data/**/*.sqlite3
+data/**/*.sqlite3-*
+data/projects/*/receipt_archive/
+data/project_registry_18_7_1.json
+
+# Release archives and temporary exports
+*.zip
+dist/
+build/
+# Local reference workbooks may contain project-specific pricing and are never
+# a runtime database or a Git release artifact.
+reference_inputs/*.xlsx
+# Cloud-style local project shortcuts and linked runtime/data directories
+/*.brk
+/*.barkav
+/BARKAV.lnk
+/app/data
+/app/runtime
+/app/tmp
+app/reference_inputs/*.xlsx
+
+# Private local project data is copied for this checkout but never versioned
+/data/
+
+
+# Private pre-migration SQLite snapshots
+**/.barkav-migration-backups/
+
+# Local tooling and agent worktrees
+.worktrees/
+.worktree-archives/
+.freebuff/
+.pnpm-store/
+graphify-out/
+.venv/
+venv/
+.vscode/
+.idea/
+
+# Private local reference workbooks and handoff exports
+phase_budget_current.xlsx
+**/phase_budget_current.xlsx
+
+# Local token-saver history
+rtk/

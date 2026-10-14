@@ -1,0 +1,43 @@
+BARKAV 17.5 — PRE-RELEASE TEST RESULTS
+Date: 2026-08-16
+
+COMPILE
+PASS — dashboard_stage17_5.py
+PASS — phase_intelligence_v175.py
+PASS — finance_db.py
+PASS — launcher_stage17.py
+PASS — development_package_v174.py
+
+AUTOMATED REGRESSION SUITE
+125 passed, 1 skipped (UI smoke intentionally separated for Xvfb)
+No failures.
+
+17.5 UI / DATA ENTRY Xvfb SMOKE
+1 passed
+Validated at 1280x900 class layout:
+- dashboard opens and title is 17.5
+- custom navigation exists for all main tabs
+- active raised navigation layer constructed
+- report fields gross_area / saleable_area / unit_count exist
+- Data Entry table uses extended multi-selection
+- all 32 phase buttons fit inside 1280px window
+- Pending editor fixed action bar remains visible
+- right-side form moves by mouse wheel without dragging scrollbar thumb
+- five detected cheques appear as five rows in the editor subtable
+- multi-cheque vertical and horizontal scrollbars are mapped
+- lifecycle selector exposes issued / pending due / cashed / returned / cancelled
+
+17.5 TARGETED FINANCE / PHASE TESTS
+PASS — repair pickaxe / excavation wording routes to phase 07 + manual excavation candidate when active
+PASS — explicit well pipe wording routes to phase 09 with multiple active phases
+PASS — phase assignment stays a Pending suggestion
+PASS — cheque lifecycle transitions are audited/accounting-safe
+PASS — guarantee cheque is blocked from normal cashing path
+PASS — 5-cheque payload creates exactly 5 independent cheque records and no sum-row cheque
+
+MANUAL VISUAL INSPECTION IN BUILD ENVIRONMENT
+PASS — rendered 1280px dashboard screenshot reviewed for dark shell, raised blue active nav, KPI grid, 32-phase strip, progress/charts and high-contrast panels.
+PASS — rendered Pending cheque editor screenshot reviewed; fixed action buttons visible and form/multi-cheque scrolling available.
+
+LIMITATION
+Final Windows acceptance is still required because Windows Tk font metrics, DPI scaling and the user's real Telegram/Gemini credentials/data cannot be reproduced in the Linux/Xvfb build environment.

@@ -1,0 +1,15 @@
+BARKAV PEYMAAN 16.3 — INTERNAL TEST RESULTS
+===========================================
+PASS - Python compile: changed modules.
+PASS - Headless GUI launch (Xvfb), all major tabs created.
+PASS - Data Entry shows text pending and 350 => 350,000 toman.
+PASS - RIAL receipt normalization guard: 3,500,000 rial => 350,000 toman.
+PASS - Rich Excel import: 32 phases.
+PASS - Phase 02: borehole quantity = 12 m.
+PASS - Phase 02: soil test = 132,100,000 toman.
+PASS - Phase 16 wastewater aggregate exists with 45 detail components in bundled workbook.
+PASS - Phase detail/price detail dialogs headless smoke.
+PASS - Multi-cheque path creates one cheque object per extracted cheque + shared document.
+PASS - #چک + #پاس exact date/amount path marks existing cheque CASHED without new cost posting.
+PASS - Legacy suite: 117 passed.
+KNOWN BASE FAILURES - 2 legacy V15 tests still fail for the same old budget fixture assumptions; not introduced by 16.3.

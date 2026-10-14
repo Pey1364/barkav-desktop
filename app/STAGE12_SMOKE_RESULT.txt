@@ -1,0 +1,4 @@
+STAGE 12 SMOKE TEST: OK
+dashboard_out=20,000,000
+cheques_total=80,000,000
+projected_30d=420,000,000

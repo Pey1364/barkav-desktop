@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/secrets.local.json)",
+      "Read(**/app/data/**)",
+      "Read(**/app/runtime/**)",
+      "Read(**/*.sqlite3)",
+      "Read(**/*.sqlite3-*)",
+      "Read(**/*.brk)",
+      "Read(**/*.barkav)"
+    ]
+  }
+}

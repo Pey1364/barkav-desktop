@@ -1,0 +1,14 @@
+BARKAV 18.4 Test Plan
+=====================
+1. Confirm V18.3 baseline before modifications.
+2. Compile V18.4 overlay modules.
+3. Run targeted V18.4 regression tests.
+4. Run V18.4 GUI integration tests.
+5. Run complete default regression suite.
+6. Run complete GUI-enabled suite under Xvfb.
+7. Checksum-audit inherited V18.3 Python modules for unintended edits.
+8. Sanitize data/runtime/cache/test attachment files.
+9. Build final application and Development Package ZIPs.
+10. Extract final application ZIP into a clean directory and rerun release tests from the actual deliverable.
+11. Verify archive has no secrets.local.json, live DB, autosave DB, runtime logs or test attachments.
+12. Leave requested Save As item explicitly deferred.

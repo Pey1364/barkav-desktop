@@ -1,0 +1,43 @@
+BARKAV / Peymaan — V18.3 FINAL TEST RESULTS
+Date: 2026-08-19
+Base: V18.2 FINAL
+Scope: exactly the 24 user-requested corrections.
+
+SOURCE WORKTREE GATE
+- Python compileall (V18.3 modules/tests): PASS
+- Dedicated numbered acceptance suite: 24 passed / 0 failed
+- Full default regression suite: 173 passed / 24 GUI opt-in skipped / 0 failed
+- Full GUI-enabled suite (Xvfb): 197 passed / 0 failed
+- Dark visual construction smoke: PASS
+- Light visual construction smoke: PASS
+
+PACKAGED-ZIP INDEPENDENT VERIFICATION
+A preliminary release ZIP was built, extracted into a clean directory, and tested independently from the working tree.
+- Archive structure/version: PASS (VERSION=18.3)
+- Secrets check: PASS — no secrets.local.json
+- Runtime/log check: PASS — no runtime logs
+- Database check: PASS — no .sqlite/.sqlite3/.db shipped in the release archive
+- Required V18.3 launcher/module/icon files: PASS
+- Python compileall from extracted ZIP: PASS
+- Dedicated 24-point acceptance from extracted ZIP: 24/24 PASS
+- Full default suite from extracted ZIP: 173 passed / 24 GUI opt-in skipped / 0 failed
+- Full GUI-enabled suite from extracted ZIP: 197/197 PASS
+
+NO-UNREQUESTED-CHANGE AUDIT
+Compared with the clean V18.2 FINAL base before documentation/release files:
+- Existing V18.2 finance/accounting/database/AI/receipt application modules were not edited.
+- V18.3 functionality is implemented by new V18.3 UI/launcher/project-center modules that inherit V18.2 FINAL.
+- Existing files intentionally changed: version metadata, shortcut creator, development-package manifest builder, shortcut icon assets.
+- No finance schema migration added; schema remains v13.
+
+24-POINT TEST MAP
+See: BARKAV_V18.3_24_POINT_CHECKLIST_COMPLETED_2026-08-19.txt
+Each requested item 01..24 has a named dedicated acceptance check, with additional GUI/regression coverage where appropriate.
+
+LIVE/PLATFORM ACCEPTANCE NOT CLAIMED
+- Live Telegram/Gemini calls require the user's real Windows secrets and network.
+- TGJU parser/failure behavior is regression-tested; live target-network access should be confirmed on the user's Windows system.
+- Native Windows Segoe UI/DPI rendering can differ by a few pixels from Linux/Xvfb visual smoke.
+
+FINAL RESULT
+PASS — release code passed all automated unit/regression/GUI/24-point acceptance gates available in the build environment.

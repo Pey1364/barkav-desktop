@@ -1,0 +1,9 @@
+Peymaan V2 Stage 10 validation
+
+- Python compile (core Stage 10 modules): PASS
+- unittest discovery: 89 tests, PASS
+- stage10_smoke_test.py: PASS
+- Headless Tk GUI construction: PASS
+- GUI main tabs detected: Dashboard / Manager / Financial / Cheques / Sales / Reconciliation / Reports / Health
+
+Telegram runtime import was not executed in the build container because the optional runtime dependency `jdatetime` is not installed there. It is listed in requirements_stage10.txt and is already required by earlier working releases.
