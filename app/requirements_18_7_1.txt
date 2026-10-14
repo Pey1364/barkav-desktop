@@ -13,3 +13,6 @@ openai
 
 # Render the actual report PDF for preview and identical Excel report pages.
 pypdfium2==5.13.0
+
+# Time zones for Asia/Tehran on Windows (zoneinfo needs the tz database).
+tzdata>=2024.1
