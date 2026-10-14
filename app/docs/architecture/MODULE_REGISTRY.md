@@ -13,7 +13,7 @@
 | WR-07 | کاربرد | `app/web_receipts/importer.py` | وارد کردن idempotent از صندوق به صف، کپی آرشیو، هش SHA-256 | WR-01، WR-06 | `test_web_receipt_import.py` | انجام شده |
 | WR-08 | آداپتور دسکتاپ | `app/web_receipts/legacy_queue.py` | پیاده‌سازی `ReceiptQueue` روی دیتابیس فعلی | WR-06، DB-02 | `test_web_receipt_import.py` | انجام شده روی دیتابیس موقت |
 | WR-09 | فرمان | `app/web_receipts/import_inbox.py` | وارد کردن دستی با `--db` و حالت `--dry-run` | WR-07، WR-08 | `test_web_receipt_import.py` | انجام شده |
-| DB-01 | پایداری | `app/finance_db.py` (مهاجرت) | افزودن `source` و `external_ref` به `pending_items` و شاخص یکتای جزئی | — | `test_web_receipt_import.py` (ارتقا) | انجام شده روی دیتابیس موقت؛ تمرین روی کپی دیتابیس واقعی مانده |
+| DB-01 | پایداری | `app/finance_db.py` (مهاجرت) | افزودن `source` و `external_ref` به `pending_items` و شاخص یکتای جزئی | — | `test_web_receipt_import.py` (ارتقا) | انجام شده؛ تمرین روی کپی دیتابیس پروژه (نسخه‌ی خودکار ۱۳ مهر) بدون خطا؛ هیچ جدول یا ردیف تغییر نکرد |
 | DB-02 | پایداری | `app/finance_db.py` (`create_pending_from_web`) | ساخت ردیف صف، تحلیل رسید و پیوست برای یک رسید وب؛ بدون ردیف مالی | DB-01 | `test_web_receipt_import.py` | انجام شده |
 
 ## برنامه‌ی آینده (شماره‌گذاری‌شده، هنوز ساخته نشده)
