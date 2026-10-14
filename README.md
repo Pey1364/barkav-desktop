@@ -135,8 +135,8 @@ vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). Bundled fonts keep their own SIL OFL licenses
-(`app/assets/fonts/licenses/`).
+[MIT](LICENSE). Bundled Persian fonts (Vazirmatn, Shabnam, Samim, Sahel, Parastoo)
+keep their own SIL Open Font License; the texts are in `app/assets/fonts/licenses/`.
 
 ---
 
