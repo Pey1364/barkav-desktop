@@ -1,244 +1,66 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <link rel="icon" type="image/png" href="/static/barkav_report_192.png">
-    <link rel="apple-touch-icon" href="/static/barkav_report_192.png">
-    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='barkav_report_192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='barkav_report_192.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
     <meta name="theme-color" content="#0F172A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="گزارش بارکاو">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بارکاو | آرشیو اسناد غیرمالی و گزارش‌گیری دوره‌ای</title>
-    <style>
-        :root {
-            --bg-dark: #0B1120;
-            --panel-bg: #1E293B;
-            --input-bg: #0F172A;
-            --border-color: #334155;
-            --accent-blue: #0284C7;
-            --accent-bright: #38BDF8;
-            --success-green: #10B981;
-            --text-main: #F1F5F9;
-            --text-muted: #94A3B8;
-        }
-        body {
-            font-family: Tahoma, "IRANSans", sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-        }
-        .topbar {
-            background: #0F172A;
-            border-bottom: 2px solid var(--accent-blue);
-            padding: 14px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .brand { font-size: 18px; font-weight: bold; color: var(--accent-bright); }
-        .nav-tabs { display: flex; gap: 10px; }
-        .tab-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: bold;
-            color: var(--text-muted);
-            background: #1E293B;
-            border: 1px solid var(--border-color);
-        }
-        .tab-btn.active {
-            background: var(--accent-blue);
-            color: #FFF;
-            border-color: var(--accent-bright);
-        }
-        .container { max-width: 1150px; margin: 24px auto; padding: 0 16px; }
-        .kpi-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-        .kpi-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 14px 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .kpi-val { font-size: 22px; font-weight: bold; color: var(--accent-bright); }
-        .quick-periods {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-        .period-chip {
-            padding: 7px 14px;
-            border-radius: 6px;
-            background: #1E293B;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 13px;
-        }
-        .period-chip.active {
-            background: var(--accent-blue);
-            border-color: var(--accent-bright);
-        }
-        .filter-panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 12px;
-            align-items: end;
-        }
-        label { display: block; margin-bottom: 6px; font-size: 12px; color: var(--text-muted); }
-        input, select {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 8px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: var(--input-bg);
-            color: #FFF;
-            font-size: 13px;
-        }
-        .btn {
-            padding: 9px 14px;
-            border-radius: 6px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-            font-size: 13px;
-        }
-        .btn-blue { background: var(--accent-blue); color: #FFF; }
-        .btn-green { background: var(--success-green); color: #FFF; }
-        .btn-print { background: #475569; color: #FFF; }
-        .report-item {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-right: 4px solid var(--accent-bright);
-            border-radius: 8px;
-            padding: 18px;
-            margin-bottom: 16px;
-        }
-        .report-header {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-            margin-bottom: 12px;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-        .tag {
-            background: #0F172A;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: var(--accent-bright);
-            border: 1px solid var(--border-color);
-        }
-        .gallery {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 14px;
-        }
-        .gallery-card {
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 6px;
-            width: 130px;
-        }
-        .gallery-card img {
-            width: 100%;
-            height: 95px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-        .gallery-caption {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 4px;
-            text-align: center;
-        }
-        @media print {
-            .topbar, .quick-periods, .filter-panel, .no-print { display: none !important; }
-            body { background: #FFF; color: #000; }
-            .report-item, .kpi-card { background: #FFF; color: #000; border: 1px solid #CCC; }
-        }
-    </style>
+    <title>بارکاو | آرشیو گزارش‌ها</title>
 </head>
 <body>
 
-<div class="topbar">
-    <div class="brand" style="display:flex;align-items:center;gap:10px;"><img src="/static/barkav_report_192.png" style="width:36px;height:36px;border-radius:8px;">BARKAV — تب اسناد غیرمالی و گزارشات دوره‌ای</div>
-    <div class="nav-tabs">
-        <a href="/" class="tab-btn">+ ثبت گزارش / سند جدید</a>
-        <a href="/reports" class="tab-btn active">آرشیو و خروجی دوره‌ای</a>
-    </div>
-</div>
+{% with active_nav = 'archive' %}{% include '_topbar.html' %}{% endwith %}
 
-<div class="container">
-    <div class="quick-periods">
-        <a href="/reports?period=daily" class="period-chip {% if period == 'daily' %}active{% endif %}">گزارش امروز (روزانه)</a>
-        <a href="/reports?period=weekly" class="period-chip {% if period == 'weekly' %}active{% endif %}">گزارش ۷ روز اخیر (هفتگی)</a>
-        <a href="/reports?period=monthly" class="period-chip {% if period == 'monthly' %}active{% endif %}">گزارش ماه جاری (ماهانه)</a>
-        <a href="/reports" class="period-chip {% if not period %}active{% endif %}">نمایش کل آرشیو</a>
+<main class="page wide">
+    <div class="chips">
+        <a href="/reports?period=daily" class="chip {% if period == 'daily' %}active{% endif %}">گزارش امروز</a>
+        <a href="/reports?period=weekly" class="chip {% if period == 'weekly' %}active{% endif %}">۷ روز اخیر</a>
+        <a href="/reports?period=monthly" class="chip {% if period == 'monthly' %}active{% endif %}">ماه جاری</a>
+        <a href="/reports" class="chip {% if not period %}active{% endif %}">کل آرشیو</a>
     </div>
 
-    <div class="kpi-row">
-        <div class="kpi-card">
-            <span>تعداد گزارشات و اسناد بازه:</span>
-            <span class="kpi-val">{{ stats.report_count }}</span>
+    <section class="kpis">
+        <div class="kpi">
+            <div class="kpi-label">تعداد گزارش و سند در بازه</div>
+            <div class="kpi-value">{{ stats.report_count }}</div>
         </div>
-        <div class="kpi-card">
-            <span>مجموع نفر-روز کارگاهی:</span>
-            <span class="kpi-val">{{ stats.total_crew_man_days }}</span>
+        <div class="kpi">
+            <div class="kpi-label">مجموع نفر-روز کارگاهی</div>
+            <div class="kpi-value">{{ stats.total_crew_man_days }}</div>
         </div>
-        <div class="kpi-card">
-            <span>تصاویر و مستندات ثبت‌شده:</span>
-            <span class="kpi-val">{{ stats.total_photos }}</span>
+        <div class="kpi">
+            <div class="kpi-label">تصاویر و مستندات</div>
+            <div class="kpi-value">{{ stats.total_photos }}</div>
         </div>
-    </div>
+    </section>
 
-    <form class="filter-panel" method="GET" action="/reports">
-        <div>
-            <label>از تاریخ (شمسی):</label>
-            <input type="text" name="start_date" value="{{ start_date }}" placeholder="۱۴۰۵/۰۵/۰۱">
+    <form class="toolbar no-print" method="GET" action="/reports">
+        <div class="field">
+            <label for="start_date">از تاریخ (شمسی)</label>
+            <input id="start_date" type="text" name="start_date" value="{{ start_date }}" placeholder="۱۴۰۵/۰۵/۰۱">
         </div>
-        <div>
-            <label>تا تاریخ (شمسی):</label>
-            <input type="text" name="end_date" value="{{ end_date }}" placeholder="۱۴۰۵/۰۵/۳۱">
+        <div class="field">
+            <label for="end_date">تا تاریخ (شمسی)</label>
+            <input id="end_date" type="text" name="end_date" value="{{ end_date }}" placeholder="۱۴۰۵/۰۵/۳۱">
         </div>
-        <div>
-            <label>فاز پروژه:</label>
-            <select name="phase_id">
+        <div class="field">
+            <label for="phase_id">فاز پروژه</label>
+            <select id="phase_id" name="phase_id">
                 <option value="">همه فازها</option>
                 {% for code, title in phases %}
                 <option value="{{ code }}" {% if phase_filter == code %}selected{% endif %}>{{ title }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div>
-            <label>نوع سند:</label>
-            <select name="doc_category">
+        <div class="field">
+            <label for="doc_category">نوع سند</label>
+            <select id="doc_category" name="doc_category">
                 <option value="">همه دسته‌ها</option>
                 <option value="گزارش روزانه کارگاه" {% if category_filter == 'گزارش روزانه کارگاه' %}selected{% endif %}>گزارش روزانه کارگاه</option>
                 <option value="صورتجلسه کارگاهی" {% if category_filter == 'صورتجلسه کارگاهی' %}selected{% endif %}>صورتجلسه کارگاهی</option>
@@ -247,67 +69,58 @@
                 <option value="رسید ورود مصالح (غیرمالی)" {% if category_filter == 'رسید ورود مصالح (غیرمالی)' %}selected{% endif %}>رسید ورود مصالح (غیرمالی)</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-blue">اعمال فیلتر</button>
-        <a href="/export/excel?start_date={{ start_date }}&end_date={{ end_date }}&phase_id={{ phase_filter }}&doc_category={{ category_filter }}" class="btn btn-green">خروجی اکسل (Excel)</a>
-        <button type="button" onclick="window.print()" class="btn btn-print">چاپ / PDF</button>
+        <div class="toolbar-actions">
+            <button type="submit" class="btn btn-primary">اعمال فیلتر</button>
+            <a href="/export/excel?start_date={{ start_date }}&end_date={{ end_date }}&phase_id={{ phase_filter }}&doc_category={{ category_filter }}" class="btn btn-ghost">خروجی اکسل</a>
+            <button type="button" class="btn btn-ghost" onclick="window.print()">چاپ / PDF</button>
+        </div>
     </form>
 
-    {% for r in reports %}
-    <div class="report-item">
-        <div class="report-header">
-            <div>
-                <span class="tag">{{ r.doc_category }}</span>
-                <strong style="margin-right:8px; color:#FFF;">تاریخ: {{ r.report_date }}</strong>
-                {% if r.phase_title %}
-                <span style="margin-right:10px; color:#38BDF8;">| {{ r.phase_title }}</span>
-                {% endif %}
+    <div class="reports">
+        {% for r in reports %}
+        <article class="report">
+            <div class="report-top">
+                <div class="report-title">
+                    <span class="badge">{{ r.doc_category }}</span>
+                    <span class="report-date">{{ r.report_date }}</span>
+                    {% if r.phase_title %}<span class="badge phase">{{ r.phase_title }}</span>{% endif %}
+                </div>
+                <div class="report-meta">
+                    <span>{{ r.id }}</span>
+                    <span>{{ r.weather_condition }}{% if r.temperature %} · {{ r.temperature }}{% endif %}</span>
+                    <span>{{ r.crew_count }} نفر</span>
+                    {% if r.attachments %}<span>{{ r.attachments|length }} تصویر</span>{% endif %}
+                </div>
             </div>
-            <div>
-                <span>شناسه: {{ r.id }}</span> |
-                <span>هوا: {{ r.weather_condition }} ({{ r.temperature or '-' }})</span> |
-                <span>نفرات: {{ r.crew_count }} نفر</span>
+
+            <div class="report-body"><strong>شرح عملیات:</strong> {{ r.work_summary }}</div>
+
+            {% if r.contractor_name or r.materials_delivered or r.machinery_used or r.delays_and_safety or r.supervisor_notes %}
+            <div class="details">
+                {% if r.contractor_name %}<div class="detail"><b>پیمانکار / اکیپ</b>{{ r.contractor_name }}</div>{% endif %}
+                {% if r.materials_delivered %}<div class="detail"><b>مصالح وارده</b>{{ r.materials_delivered }}</div>{% endif %}
+                {% if r.machinery_used %}<div class="detail"><b>ماشین‌آلات</b>{{ r.machinery_used }}</div>{% endif %}
+                {% if r.delays_and_safety %}<div class="detail"><b>موانع و ایمنی</b>{{ r.delays_and_safety }}</div>{% endif %}
+                {% if r.supervisor_notes %}<div class="detail"><b>نظر نظارت / مدیریت</b>{{ r.supervisor_notes }}</div>{% endif %}
             </div>
-        </div>
+            {% endif %}
 
-        <div style="line-height: 1.7; font-size: 14px; margin-bottom: 10px;">
-            <strong>شرح عملیات:</strong> {{ r.work_summary }}
-        </div>
-
-        {% if r.contractor_name %}
-        <div style="font-size: 13px; color: #CBD5E1; margin-top:4px;"><strong>پیمانکار / اکیپ:</strong> {{ r.contractor_name }}</div>
-        {% endif %}
-        {% if r.materials_delivered %}
-        <div style="font-size: 13px; color: #93C5FD; margin-top:4px;"><strong>مصالح وارده:</strong> {{ r.materials_delivered }}</div>
-        {% endif %}
-        {% if r.machinery_used %}
-        <div style="font-size: 13px; color: #A7F3D0; margin-top:4px;"><strong>ماشین‌آلات:</strong> {{ r.machinery_used }}</div>
-        {% endif %}
-        {% if r.delays_and_safety %}
-        <div style="font-size: 13px; color: #FCA5A5; margin-top:4px;"><strong>موانع و ایمنی:</strong> {{ r.delays_and_safety }}</div>
-        {% endif %}
-        {% if r.supervisor_notes %}
-        <div style="font-size: 13px; color: #FDE68A; margin-top:4px;"><strong>نظر نظارت / مدیریت:</strong> {{ r.supervisor_notes }}</div>
-        {% endif %}
-
-        {% if r.attachments %}
-        <div class="gallery">
-            {% for att in r.attachments %}
-            <div class="gallery-card">
-                <a href="/uploads/{{ att.file_name }}" target="_blank">
-                    <img src="/uploads/{{ att.file_name }}" alt="{{ att.caption }}">
+            {% if r.attachments %}
+            <div class="gallery">
+                {% for att in r.attachments %}
+                <a class="thumb" href="/uploads/{{ att.file_name }}" target="_blank" rel="noopener">
+                    <img src="/uploads/{{ att.file_name }}" alt="{{ att.caption }}" loading="lazy">
+                    <small>{{ att.caption or att.original_name }}</small>
                 </a>
-                <div class="gallery-caption">{{ att.caption or att.original_name }}</div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+            {% endif %}
+        </article>
+        {% else %}
+        <div class="empty">هیچ گزارش یا سند غیرمالی در این بازه زمانی ثبت نشده است.</div>
+        {% endfor %}
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 40px; color: var(--text-muted); background: var(--panel-bg); border-radius: 8px;">
-        هیچ گزارش یا سند غیرمالی در این بازه زمانی ثبت نشده است.
-    </div>
-    {% endfor %}
-</div>
+</main>
 
 </body>
 </html>

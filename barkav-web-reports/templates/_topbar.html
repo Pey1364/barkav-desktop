@@ -1,0 +1,15 @@
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="/">
+            <img src="{{ url_for('static', filename='barkav_report_192.png') }}" alt="BARKAV">
+            <div>
+                <div class="brand-title"><b>BARKAV</b> · گزارش کارگاه</div>
+                <div class="brand-sub">مدیریت اسناد غیرمالی و گزارشات روزانه</div>
+            </div>
+        </a>
+        <nav class="seg">
+            <a href="/" class="{% if active_nav == 'new' %}active{% endif %}">+ ثبت گزارش</a>
+            <a href="/reports" class="{% if active_nav == 'archive' %}active{% endif %}">آرشیو و خروجی</a>
+        </nav>
+    </div>
+</header>

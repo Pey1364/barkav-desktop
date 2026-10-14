@@ -3,106 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود | BARKAV</title>
-    <link rel="manifest" href="/static/manifest.json">
-    <style>
-        :root {
-            --bg-dark: #0B1120;
-            --panel-bg: #1E293B;
-            --input-bg: #0F172A;
-            --border-color: #334155;
-            --accent-blue: #0284C7;
-            --accent-bright: #38BDF8;
-            --danger-red: #EF4444;
-            --text-main: #F1F5F9;
-            --text-muted: #94A3B8;
-        }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: Tahoma, "Segoe UI", sans-serif;
-            padding: 16px;
-            box-sizing: border-box;
-        }
-        .card {
-            width: 100%;
-            max-width: 360px;
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 28px 24px;
-            box-sizing: border-box;
-        }
-        .logo {
-            display: block;
-            width: 72px;
-            height: 72px;
-            margin: 0 auto 14px;
-            border-radius: 16px;
-        }
-        h1 {
-            margin: 0 0 4px;
-            text-align: center;
-            font-size: 20px;
-            color: var(--accent-bright);
-        }
-        .sub {
-            margin: 0 0 22px;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-        label {
-            display: block;
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-        input[type="password"] {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 11px 12px;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-size: 16px;
-            outline: none;
-        }
-        input[type="password"]:focus { border-color: var(--accent-bright); }
-        button {
-            width: 100%;
-            margin-top: 16px;
-            padding: 12px;
-            background: var(--accent-blue);
-            border: 1px solid var(--accent-bright);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 15px;
-            cursor: pointer;
-        }
-        .error {
-            margin-top: 14px;
-            font-size: 13px;
-            color: var(--danger-red);
-        }
-    </style>
+    <title>ورود | بارکاو</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='barkav_report_192.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <meta name="theme-color" content="#0F172A">
 </head>
 <body>
-    <form class="card" method="post" action="{{ url_for('login') }}">
-        <img class="logo" src="{{ url_for('static', filename='barkav_report_512.png') }}" alt="BARKAV">
-        <h1>BARKAV</h1>
-        <p class="sub">سامانه ثبت گزارشات روزانه کارگاه — برای ادامه رمز را وارد کنید.</p>
-        <label for="password">رمز ورود</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required autofocus>
-        <button type="submit">ورود</button>
+<div class="auth">
+    <form class="auth-card" method="post" action="{{ url_for('login') }}">
+        <img src="{{ url_for('static', filename='barkav_report_512.png') }}" alt="BARKAV">
+        <h1>بارکاو</h1>
+        <p>سامانه ثبت گزارش روزانه کارگاه. برای ادامه رمز را وارد کنید.</p>
+        <div class="field">
+            <label for="password">رمز ورود</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary">ورود</button>
         {% if error %}
-        <div class="error">{{ error }}</div>
+        <div class="error-text">{{ error }}</div>
         {% endif %}
     </form>
+</div>
 </body>
 </html>
