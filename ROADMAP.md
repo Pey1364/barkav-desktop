@@ -35,10 +35,17 @@ Feedback is welcome. Open an issue, or comment on an existing one.
 
 ### 3. Receipts from a phone
 
-- A small mobile companion app to photograph a receipt and add a caption.
-- It sends items into the same pending-approval queue the Telegram bot uses
-  today. A phone capture never posts a financial row by itself; a person still
-  approves it in the desktop app.
+- **Status:** in progress on the branch `feature/web-receipts`. A local web page
+  (installable, Persian, HTTPS with a self-signed certificate) sends photos and
+  captions to an inbox on the desktop. Photos lose their EXIF data before they are
+  stored. The inbox is covered by tests.
+- **Next:** import inbox items into the approval queue. The current queue is tied to
+  Telegram message ids, so this needs a source-neutral entry point first.
+- **Later:** a remote server for uploads from outside the home network. Photos would
+  be encrypted on the phone before they leave it, so the server only stores
+  ciphertext. Android packaging can follow once the web version is stable.
+- A phone capture never posts a financial row by itself. A person approves it in the
+  desktop app.
 
 ## Exploring
 

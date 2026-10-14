@@ -73,6 +73,22 @@ The reference estimate workbook the author uses contains private project prices
 and is not part of this repository. `app/phase_budget_template.xlsx` shows the
 expected layout.
 
+## Receipts from a phone (experimental, on branch `feature/web-receipts`)
+
+A local web page lets a phone send a receipt photo and a caption to the desktop
+computer on the same home network. The photo is re-encoded (which removes EXIF
+data, including GPS) and stored in an inbox folder. Nothing becomes a financial row
+until a person imports it and approves it.
+
+```bat
+cd app
+py -3 -m web_receipts.run_local
+```
+
+Open the address shown on the phone, trust the self-signed certificate once, and
+enter the pairing code. The inbox and the certificate are in `app/data/web_receipts`,
+which Git ignores. Importing inbox items into the approval queue is not built yet.
+
 ## Tests
 
 ```bat

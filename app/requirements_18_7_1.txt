@@ -13,3 +13,6 @@ openai
 
 # Render the actual report PDF for preview and identical Excel report pages.
 pypdfium2==5.13.0
+
+# Web receipt page: HTTPS certificate generation
+cryptography>=42

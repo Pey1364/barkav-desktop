@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f2937">
+  <title>ثبت رسید</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <style>
+    :root { color-scheme: light dark; --gap: 16px; }
+    body {
+      margin: 0; padding: var(--gap);
+      font-family: Vazirmatn, Tahoma, sans-serif; font-size: 16px; line-height: 1.8;
+      background: Canvas; color: CanvasText;
+    }
+    main { max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 8px 0 16px; }
+    label { display: block; margin: 14px 0 6px; font-weight: 600; }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%; box-sizing: border-box; padding: 10px 12px;
+      font: inherit; border: 1px solid #9ca3af; border-radius: 8px;
+      background: Field; color: FieldText;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    input[type="file"] { width: 100%; font: inherit; }
+    button {
+      width: 100%; margin-top: 20px; padding: 12px; font: inherit; font-weight: 700;
+      border: 0; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: default; }
+    #status { margin-top: 16px; min-height: 1.8em; font-weight: 600; }
+    .ok { color: #15803d; }
+    .bad { color: #b91c1c; }
+    .hint { font-size: 14px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ثبت رسید برای برنامه‌ی بارکاو</h1>
+    <p class="hint">رسید فقط در صف بررسی ذخیره می‌شود. تا وقتی شخصی در برنامه‌ی ویندوز آن را تأیید نکند، هیچ تراکنشی ثبت نمی‌شود.</p>
+
+    <form id="form" novalidate>
+      <label for="code">کد جفت‌سازی</label>
+      <input id="code" type="password" autocomplete="off" inputmode="text" dir="ltr" required>
+
+      <label for="photo">عکس رسید</label>
+      <input id="photo" type="file" accept="image/*" capture="environment" required>
+
+      <label for="caption">توضیح (اختیاری)</label>
+      <textarea id="caption" maxlength="1000" placeholder="مثلاً: بابت خرید آجر، فاکتور ۱۲ مهر"></textarea>
+
+      <button id="send" type="submit">ارسال رسید</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <script>
+    (function () {
+      var KEY = 'barkav-receipt-code';
+      var form = document.getElementById('form');
+      var code = document.getElementById('code');
+      var photo = document.getElementById('photo');
+      var caption = document.getElementById('caption');
+      var send = document.getElementById('send');
+      var status = document.getElementById('status');
+
+      try { code.value = localStorage.getItem(KEY) || ''; } catch (e) { /* storage may be blocked */ }
+
+      function say(text, cls) {
+        status.textContent = text;
+        status.className = cls || '';
+      }
+
+      var messages = {
+        401: 'کد جفت‌سازی اشتباه است.',
+        411: 'ارسال ناقص بود. دوباره تلاش کن.',
+        413: 'عکس خیلی بزرگ است (بیشتر از ۱۵ مگابایت).',
+        422: 'این فایل عکس خوانده نشد یا نوع آن پشتیبانی نمی‌شود.',
+        400: 'توضیح یا داده‌ی ارسال معتبر نیست.'
+      };
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var file = photo.files && photo.files[0];
+        if (!code.value.trim()) { say('کد جفت‌سازی را وارد کن.', 'bad'); return; }
+        if (!file) { say('عکس رسید را انتخاب کن.', 'bad'); return; }
+
+        try { localStorage.setItem(KEY, code.value.trim()); } catch (e) { /* ignore */ }
+
+        send.disabled = true;
+        say('در حال ارسال…');
+
+        fetch('/api/receipts', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + code.value.trim(),
+            'X-Receipt-Caption': encodeURIComponent(caption.value.trim()),
+            'Content-Type': file.type || 'application/octet-stream'
+          },
+          body: file
+        }).then(function (response) {
+          if (response.status === 201) {
+            return response.json().then(function (data) {
+              say('ارسال شد. شماره‌ی پیگیری: ' + data.receipt_id, 'ok');
+              photo.value = '';
+              caption.value = '';
+            });
+          }
+          say(messages[response.status] || 'ارسال ناموفق بود (' + response.status + ').', 'bad');
+        }).catch(function () {
+          say('به کامپیوتر وصل نشد. اتصال شبکه و روشن بودن برنامه را بررسی کن.', 'bad');
+        }).then(function () {
+          send.disabled = false;
+        });
+      });
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function () { /* optional */ });
+      }
+    })();
+  </script>
+</body>
+</html>
