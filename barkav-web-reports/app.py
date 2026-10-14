@@ -1,11 +1,12 @@
 import os
 import io
+import hmac
 import uuid
 from datetime import datetime, timedelta
 import jdatetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file, session, redirect, url_for
 from database import get_connection, init_db, BARKAV_32_PHASES
 
 app = Flask(__name__)
@@ -15,9 +16,47 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # حداکثر ۵۰ مگابایت در هر ارسال
 
+# کلید نشست: روی هاست باید ثابت باشد، در غیر این صورت هر بار اجرا نشست‌ها باطل می‌شوند
+app.secret_key = os.environ.get("BARKAV_SECRET_KEY") or os.urandom(32)
+app.permanent_session_lifetime = timedelta(days=30)
+
+# رمز ورود: اگر تنظیم نشود، ورود غیرفعال است (حالت محلی روی لپ‌تاپ)
+APP_PASSWORD = os.environ.get("BARKAV_APP_PASSWORD", "")
+LOGIN_EXEMPT_ENDPOINTS = {"login", "static"}
+
 init_db()
 
 PHASE_DICT = dict(BARKAV_32_PHASES)
+
+@app.before_request
+def require_login():
+    if not APP_PASSWORD or request.endpoint in LOGIN_EXEMPT_ENDPOINTS or session.get("logged_in"):
+        return None
+    # صفحات و فایل‌ها به صفحه ورود می‌روند؛ درخواست‌های API با 401 جواب داده می‌شوند
+    if request.method == "GET" and not request.path.startswith("/api/"):
+        return redirect(url_for("login"))
+    return jsonify({"success": False, "error": "ابتدا وارد شوید."}), 401
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not APP_PASSWORD:
+        return redirect(url_for("index"))
+    error = ""
+    if request.method == "POST":
+        # مقایسه بایتی تا رمز فارسی هم خطا ندهد و زمان پاسخ وابسته به محتوا نباشد
+        given = request.form.get("password", "").encode("utf-8")
+        if hmac.compare_digest(given, APP_PASSWORD.encode("utf-8")):
+            session.clear()
+            session["logged_in"] = True
+            session.permanent = True
+            return redirect(url_for("index"))
+        error = "رمز ورود اشتباه است."
+    return render_template("login.html", error=error)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 def get_today_jalali():
     return jdatetime.date.today().strftime("%Y/%m/%d")
@@ -271,5 +310,7 @@ if __name__ == "__main__":
     print(" BARKAV Non-Financial & Daily Reports Web Server")
     print(" Local URL:   http://127.0.0.1:5050")
     print(" Network URL: http://0.0.0.0:5050")
+    print(" Login:       " + ("فعال" if APP_PASSWORD else "غیرفعال (BARKAV_APP_PASSWORD تنظیم نشده)"))
     print("====================================================")
-    app.run(host="0.0.0.0", port=5050, debug=True)
+    # حالت debug فقط با BARKAV_DEBUG=1 فعال می‌شود تا روی هاست عمومی خاموش بماند
+    app.run(host="0.0.0.0", port=5050, debug=os.environ.get("BARKAV_DEBUG") == "1")
