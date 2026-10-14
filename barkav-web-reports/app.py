@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 import jdatetime
 import openpyxl
+from PIL import Image, ImageOps
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from flask import Flask, render_template, request, jsonify, send_from_directory, send_file, session, redirect, url_for
 from database import get_connection, init_db, BARKAV_32_PHASES
@@ -73,6 +74,34 @@ def get_period_start_jalali(period_type):
         return start.strftime("%Y/%m/%d"), today.strftime("%Y/%m/%d")
     return "", ""
 
+PHOTO_MAX_SIDE = 1600        # بیشترین طول یا عرض عکس بعد از کوچک‌سازی (پیکسل)
+PHOTO_JPEG_QUALITY = 80      # کیفیت JPEG؛ برای گزارش کارگاه کافی و حجم کم است
+
+def save_attachment(file, stem, ext):
+    """عکس را کوچک و فشرده (JPEG) ذخیره می‌کند تا فضای هاست رایگان کم مصرف شود.
+    اگر فایل عکس خوانده نشود (مثلاً PDF یا HEIC)، بدون تغییر ذخیره می‌شود."""
+    folder = app.config["UPLOAD_FOLDER"]
+    try:
+        file.stream.seek(0)
+        img = ImageOps.exif_transpose(Image.open(file.stream))
+        img.thumbnail((PHOTO_MAX_SIDE, PHOTO_MAX_SIDE))
+        if img.mode in ("RGBA", "LA", "P"):
+            # شفافیت را روی پس‌زمینه سفید می‌گذاریم تا بخش‌های شفاف سیاه نشوند
+            img = img.convert("RGBA")
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        saved_filename = f"{stem}.jpg"
+        img.save(os.path.join(folder, saved_filename), "JPEG", quality=PHOTO_JPEG_QUALITY, optimize=True)
+        return saved_filename
+    except Exception:
+        file.stream.seek(0)
+        saved_filename = f"{stem}{ext}"
+        file.save(os.path.join(folder, saved_filename))
+        return saved_filename
+
 @app.route("/")
 def index():
     return render_template(
@@ -124,8 +153,8 @@ def create_report():
         for idx, file in enumerate(uploaded_files):
             if file and file.filename:
                 ext = os.path.splitext(file.filename)[1].lower()
-                saved_filename = f"{report_id}_{idx+1}_{uuid.uuid4().hex[:6]}{ext}"
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], saved_filename))
+                stem = f"{report_id}_{idx+1}_{uuid.uuid4().hex[:6]}"
+                saved_filename = save_attachment(file, stem, ext)
                 cap = captions[idx] if idx < len(captions) else ""
 
                 cursor.execute('''
