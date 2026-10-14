@@ -42,7 +42,9 @@ class LoginGateTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 302)
 
     def test_login_page_and_static_are_public(self):
-        self.assertEqual(self.client.get("/login").status_code, 200)
+        resp = self.client.get("/login")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"barkav_report_512.png", resp.data)
         self.assertEqual(self.client.get("/static/manifest.json").status_code, 200)
 
     def test_wrong_password_is_rejected(self):

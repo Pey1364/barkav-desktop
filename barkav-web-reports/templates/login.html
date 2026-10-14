@@ -38,8 +38,16 @@
             padding: 28px 24px;
             box-sizing: border-box;
         }
+        .logo {
+            display: block;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 14px;
+            border-radius: 16px;
+        }
         h1 {
             margin: 0 0 4px;
+            text-align: center;
             font-size: 20px;
             color: var(--accent-bright);
         }
@@ -86,6 +94,7 @@
 </head>
 <body>
     <form class="card" method="post" action="{{ url_for('login') }}">
+        <img class="logo" src="{{ url_for('static', filename='barkav_report_512.png') }}" alt="BARKAV">
         <h1>BARKAV</h1>
         <p class="sub">سامانه ثبت گزارشات روزانه کارگاه — برای ادامه رمز را وارد کنید.</p>
         <label for="password">رمز ورود</label>
