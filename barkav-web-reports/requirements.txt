@@ -1,0 +1,3 @@
+flask>=3.0.0
+openpyxl>=3.1.0
+jdatetime>=5.0.0

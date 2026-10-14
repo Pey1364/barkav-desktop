@@ -1,0 +1,22 @@
+{
+  "name": "بارکاو - گزارش روزانه کارگاه",
+  "short_name": "گزارش بارکاو",
+  "description": "ثبت گزارشات روزانه و بارگذاری اسناد غیرمالی کارگاه در سرور محلی بارکاو",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1120",
+  "theme_color": "#0F172A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/barkav_report_192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/barkav_report_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

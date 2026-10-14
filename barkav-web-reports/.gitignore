@@ -1,0 +1,8 @@
+# نادیده‌گیری فایل‌های اجرایی و دیتابیس‌های محلی
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite3
+.env
+uploads/*
+!uploads/.gitkeep
