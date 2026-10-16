@@ -587,3 +587,161 @@ button {
     animation: none !important;
   }
 }
+
+/* desktop review page (desktop.html): same tokens, wider layout */
+.desk {
+  max-width: 980px;
+  margin-inline: auto;
+  padding: 20px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.desk-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.desk-tabs button {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.desk-tabs button.on {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.desk-hint,
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.desk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desk-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.desk-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chip-static {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--card-border);
+  background: var(--card-strong);
+  white-space: nowrap;
+}
+
+.desk-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.desk-photos img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  max-width: 100%;
+}
+
+.desk-summary {
+  margin: 0;
+  font-size: 14px;
+}
+
+.desk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.desk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px;
+}
+
+.desk-note {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.desk-note pre {
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--card-strong);
+  overflow-x: auto;
+  direction: ltr;
+  text-align: left;
+  font-size: 12px;
+}
+
+.desk-toast {
+  position: sticky;
+  bottom: 12px;
+  inset-inline: auto;
+  width: auto;
+  align-self: center;
+  cursor: pointer;
+}
+
+.desk code {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* desktop buttons keep their own width instead of filling the row */
+.desk .btn-primary {
+  width: auto;
+  padding-inline: 22px;
+}
+
+.desk .actions {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.desk .actions .btn-primary {
+  flex: 0 0 auto;
+}

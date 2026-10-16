@@ -193,3 +193,31 @@ def test_classification_keeps_the_event_date_and_amount(tmp_path):
                    event_date="1405-07-24", amount="250000000")
     row = store.list_review_items("under_review")[0]
     assert (row["event_date"], row["amount"]) == ("1405-07-24", "250000000")
+
+
+# --- desktop page support (FD-07 desktop part) -------------------------------------------
+
+def test_document_photo_is_served_as_jpeg(tmp_path):
+    store = Store(tmp_path)
+    store.add_document(document_id="D-1", mode="quick", caption="", received_at="t", images=[b"\xff\xd8one", b"\xff\xd8two"])
+    client = TestClient(create_app(tmp_path))
+    response = client.get("/api/v1/documents/D-1/images/2")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.content == b"\xff\xd8two"
+
+
+def test_missing_photo_is_not_found(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    assert client.get("/api/v1/documents/none/images/1").status_code == 404
+
+
+def test_desktop_server_allows_only_the_desktop_page_origin(tmp_path, monkeypatch):
+    monkeypatch.setenv("BARKAV_FIELD_DATA_DIR", str(tmp_path))
+    from barkav_field import server
+
+    client = TestClient(server.app)
+    allowed = client.get("/api/v1/health", headers={"Origin": "http://127.0.0.1:5173"})
+    refused = client.get("/api/v1/health", headers={"Origin": "https://example.com"})
+    assert allowed.headers.get("access-control-allow-origin") == "http://127.0.0.1:5173"
+    assert "access-control-allow-origin" not in refused.headers

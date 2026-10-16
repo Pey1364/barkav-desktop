@@ -206,6 +206,15 @@ class Store:
                 )
         return True
 
+    def document_image_path(self, document_id: str, position: int) -> Path | None:
+        """Absolute path of one stored photo, or None. The path comes from the database only."""
+        with self._connect() as con:
+            row = con.execute(
+                "SELECT image_path FROM document_images WHERE document_id=? AND position=?",
+                (document_id, position),
+            ).fetchone()
+        return (self.data_dir / row["image_path"]) if row else None
+
     def list_documents(self) -> list[dict]:
         with self._connect() as con:
             rows = con.execute(

@@ -4,6 +4,7 @@ Routes (all under /api/v1):
     GET  /health                          status
     GET  /receipts                        stored receipts, newest first (no image bytes)
     GET  /documents                       stored documents with their photo counts (FD-13)
+    GET  /documents/{id}/images/{n}       one stored photo (JPEG)
     GET  /daily-reports                   stored daily reports, newest first
     GET  /review-items?status=            review queue (FD-12), optional status filter
     POST /review-items/{id}/classify      save the wizard answers; moves the item under review
@@ -19,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .store import ReviewError, Store
@@ -54,6 +56,13 @@ def create_app(data_dir: Path) -> FastAPI:
     @app.get("/api/v1/documents")
     def documents() -> list[dict]:
         return app.state.store.list_documents()
+
+    @app.get("/api/v1/documents/{document_id}/images/{position}")
+    def document_image(document_id: str, position: int) -> FileResponse:
+        path = app.state.store.document_image_path(document_id, position)
+        if path is None or not path.is_file():
+            raise HTTPException(status_code=404, detail="photo not found")
+        return FileResponse(path, media_type="image/jpeg")
 
     @app.get("/api/v1/daily-reports")
     def daily_reports() -> list[dict]:
