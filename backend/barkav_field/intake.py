@@ -21,7 +21,7 @@ from .store import Store
 
 
 # Optional daily-report fields (FD-13): construction phase, weather and temperature.
-DAILY_REPORT_DETAILS = ("phase", "weather", "temperature")
+DAILY_REPORT_DETAILS = ("phase", "weather", "temperature", "calendar")
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,27 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
         # The review item is created with the receipt; a complete classification from the phone puts it under review.
         store.create_review_item(item_id=str(payload["id"]), classification=payload.get("review"))
         return ("receipt", str(payload["id"])) if created else ("receipt-duplicate", str(payload["id"]))
+    if kind == "review_classification":
+        # Wizard answers sent from the phone for a quick document. Once the item is decided it is
+        # final, so a late classification is ignored (and marked seen) instead of retried forever.
+        item_id = str(payload["item_id"])
+        current = store.get_review_item(item_id)
+        if current is None:
+            raise ValueError("review item not found yet")
+        if current["status"] in ("approved", "rejected"):
+            return ("review_classification-duplicate", item_id)
+        review = payload.get("review") or {}
+        store.classify(
+            item_id,
+            title=str(review.get("title", "")),
+            transaction_type=str(review.get("transaction_type", "")),
+            document_kind=str(review.get("document_kind", "")),
+            category=str(review.get("category", "")),
+            note=str(review.get("note", "")),
+            event_date=str(review.get("event_date", "")),
+            amount=str(review.get("amount", "")),
+        )
+        return ("review_classification", item_id)
     if kind == "review_decision":
         # A decision made on the phone. If the item is not yet under review, ReviewError is raised
         # and the file is not marked seen, so the next pull tries it again.

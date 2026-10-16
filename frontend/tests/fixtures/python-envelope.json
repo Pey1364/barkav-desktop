@@ -1,0 +1,30 @@
+{
+  "passphrase": "test-passphrase-1",
+  "envelope": {
+    "v": 1,
+    "kdf": "scrypt",
+    "n": 32768,
+    "r": 8,
+    "p": 1,
+    "salt": "8vf6Mhf1qu6v3nNJfxuJQg==",
+    "nonce": "/IKLvMiLrLVM6oy3",
+    "ct": "Kl2Q87mhL0TKlEEAzq8ng8tIFnv5aMpzjKvRXhlYuag3TRAQzzz6yAmVoqKGcDJ4PwUX4ULCyygAbi+CV3bvmnK5GKmsYS0msDhpOybqYggT55A3QsXlLcfdZEtWLS3s6SPGdtlMC187jAYo9f2s/jYP33aZHj7aUNwSDd1wJK6ca+0/LWCXP839zUf3yASd0+v1jMRYfBfBqi+VUWhvt8gnPXHZ4Z1A5YrMoDYveMNeSIZLzXaxUfc4p7N0VXLYmGv5VXj6lhQLoQgqMN6+RthKA+2mZUfSsMGEWLDxvgEU3lvzJgADvSVn7+pzhuAuMPUCBucTYg3+naB0l/7GUT4ChTJg6KgV1yF9pGL7C889vU6Xb2pVIwgeIt60tTI8qLzZJlQfQJuyoq0Qfyox9URVvsYBjVo6wtVEGby/XKWhNmzMECyXTwrB31V6WobyNWpTANA3tapaAw=="
+  },
+  "payload": {
+    "kind": "document",
+    "id": "fixture-python-1",
+    "mode": "detailed",
+    "caption": "شرح آزمایشی ۱ — فاکتور",
+    "received_at": "2026-10-16T10:00:00Z",
+    "images_b64": [
+      "/9hmaXh0dXJlLXBob3Rv"
+    ],
+    "review": {
+      "title": "خرید زمین",
+      "transaction_type": "چک",
+      "document_kind": "financial",
+      "event_date": "1405-07-24",
+      "amount": "250000000"
+    }
+  }
+}

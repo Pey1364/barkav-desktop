@@ -1,0 +1,20 @@
+{
+  "passphrase": "test-passphrase-1",
+  "envelope": {
+    "v": 1,
+    "kdf": "scrypt",
+    "n": 32768,
+    "r": 8,
+    "p": 1,
+    "salt": "IQO9EYCdVhu0UmgVJ9VvMg==",
+    "nonce": "QQ64KvDK1UU4w4Ka",
+    "ct": "vyiW8w6B3yjPmSzPen8cT5yZeSPt4p/MFodl4FuL4nFU5lgMO7CPfQQJVijgzCKDsISc9OBJJ3AWafBEEcQbnKIB2z1iQJNr6CoF8KNpFt5/jnmF0v9laqAvBf5XRhtnIeTJGNCkyOXRm/3+NszyQmFfQ/WamRTwuNtRl8B1Y5XKIiPVCNW+6SQ="
+  },
+  "payload": {
+    "kind": "daily_report",
+    "id": "fixture-js-1",
+    "report_date": "1405-07-24",
+    "body": "شرح آزمایشی",
+    "calendar": "jalali"
+  }
+}

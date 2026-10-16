@@ -30,6 +30,8 @@ class ClassifyBody(BaseModel):
     document_kind: str
     category: str = ""
     note: str = ""
+    event_date: str = ""
+    amount: str = ""
 
 
 class DecisionBody(BaseModel):

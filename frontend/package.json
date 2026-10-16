@@ -1,10 +1,9 @@
 {
   "name": "barkav-field-web",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "BARKAV Field phone app",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
@@ -15,6 +14,7 @@
   "type": "commonjs",
   "dependencies": {
     "@fontsource/vazirmatn": "^5.3.0",
+    "@noble/hashes": "^1.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -23,7 +23,8 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "5.6",
-    "vite": "^6.4.4"
+    "vite": "^6.4.4",
+    "vitest": "^2.1.9"
   },
   "private": "true"
 }

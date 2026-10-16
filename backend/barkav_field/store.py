@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS review_items (
     category TEXT NOT NULL DEFAULT '',
     document_kind TEXT CHECK (document_kind IN ('financial', 'non_financial')),
     note TEXT NOT NULL DEFAULT '',
+    event_date TEXT NOT NULL DEFAULT '',
+    amount TEXT NOT NULL DEFAULT '',
     decided_by TEXT,
     decided_at TEXT,
     updated_at TEXT NOT NULL
@@ -95,6 +97,8 @@ def _clean_classification(data: dict | None) -> dict | None:
         "category": str(data.get("category", "")).strip(),
         "document_kind": document_kind,
         "note": str(data.get("note", "")).strip(),
+        "event_date": str(data.get("event_date", "")).strip(),
+        "amount": str(data.get("amount", "")).strip(),
     }
 
 
@@ -115,6 +119,10 @@ class Store:
         columns = {row["name"] for row in con.execute("PRAGMA table_info(daily_reports)")}
         if "details" not in columns:
             con.execute("ALTER TABLE daily_reports ADD COLUMN details TEXT NOT NULL DEFAULT '{}'")
+        review_columns = {row["name"] for row in con.execute("PRAGMA table_info(review_items)")}
+        for column in ("event_date", "amount"):
+            if column not in review_columns:
+                con.execute(f"ALTER TABLE review_items ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -229,8 +237,8 @@ class Store:
             if con.execute("SELECT 1 FROM review_items WHERE id=?", (item_id,)).fetchone():
                 return False
             con.execute(
-                "INSERT INTO review_items(id, status, title, transaction_type, category, document_kind, note, updated_at)"
-                " VALUES(?,?,?,?,?,?,?,?)",
+                "INSERT INTO review_items(id, status, title, transaction_type, category, document_kind, note,"
+                " event_date, amount, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
                 (
                     item_id,
                     "under_review" if values else "new",
@@ -239,6 +247,8 @@ class Store:
                     values["category"] if values else "",
                     values["document_kind"] if values else None,
                     values["note"] if values else "",
+                    values["event_date"] if values else "",
+                    values["amount"] if values else "",
                     _now(),
                 ),
             )
@@ -253,11 +263,13 @@ class Store:
         document_kind: str,
         category: str = "",
         note: str = "",
+        event_date: str = "",
+        amount: str = "",
     ) -> None:
         """Save the wizard answers and move a new or under-review item to under review."""
         values = _clean_classification(
             {"title": title, "transaction_type": transaction_type, "document_kind": document_kind,
-             "category": category, "note": note}
+             "category": category, "note": note, "event_date": event_date, "amount": amount}
         )
         if values is None:
             raise ReviewError("عنوان، نوع تراکنش و نوع سند (مالی یا غیرمالی) لازم است.")
@@ -269,9 +281,9 @@ class Store:
                 raise ReviewError("این ورودی دیگر قابل ویرایش نیست.")
             con.execute(
                 "UPDATE review_items SET status='under_review', title=?, transaction_type=?, category=?,"
-                " document_kind=?, note=?, updated_at=? WHERE id=?",
+                " document_kind=?, note=?, event_date=?, amount=?, updated_at=? WHERE id=?",
                 (values["title"], values["transaction_type"], values["category"], values["document_kind"],
-                 values["note"], _now(), item_id),
+                 values["note"], values["event_date"], values["amount"], _now(), item_id),
             )
 
     def decide(self, item_id: str, *, decision: str, decided_by: str, decided_at: str) -> bool:
@@ -294,9 +306,18 @@ class Store:
             )
         return True
 
+    def get_review_item(self, item_id: str) -> dict | None:
+        with self._connect() as con:
+            row = con.execute(
+                "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount,"
+                " decided_by, decided_at, updated_at FROM review_items WHERE id=?",
+                (item_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
     def list_review_items(self, status: str | None = None) -> list[dict]:
         sql = (
-            "SELECT id, status, title, transaction_type, category, document_kind, note,"
+            "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount,"
             " decided_by, decided_at, updated_at FROM review_items"
         )
         args: tuple = ()

@@ -126,3 +126,70 @@ def test_documents_route_lists_photo_counts(tmp_path):
     Store(tmp_path).add_document(document_id="D-1", mode="quick", caption="آجر", received_at="t", images=[b"a", b"b"])
     client = TestClient(create_app(tmp_path))
     assert [(row["id"], row["image_count"]) for row in client.get("/api/v1/documents").json()] == [("D-1", 2)]
+
+
+# --- phone classification of a quick document (FD-12, FD-13) ---------------------------
+
+def _classification(item_id, **review):
+    return {"kind": "review_classification", "item_id": item_id, "review": review}
+
+
+def test_phone_classifies_a_quick_document_and_it_goes_under_review(tmp_path):
+    inbox = MemInbox()
+    inbox.add("drive-1", _document("D-1", "quick"))
+    store = Store(tmp_path)
+    pull_once(inbox=inbox, store=store, passphrase=PASS)
+    assert [row["id"] for row in store.list_review_items("new")] == ["D-1"]
+
+    inbox.add("drive-2", _classification("D-1", **REVIEW))
+    pull_once(inbox=inbox, store=store, passphrase=PASS)
+
+    assert [row["id"] for row in store.list_review_items("under_review")] == ["D-1"]
+
+
+def test_classification_that_arrives_before_its_document_is_retried(tmp_path):
+    store = Store(tmp_path)
+    first = MemInbox()
+    first.add("drive-2", _classification("D-1", **REVIEW))
+    report = pull_once(inbox=first, store=store, passphrase=PASS)
+    assert [remote_id for remote_id, _ in report.failed] == ["drive-2"]
+
+    second = MemInbox()
+    second.add("drive-1", _document("D-1", "quick"))
+    second.add("drive-2", _classification("D-1", **REVIEW))
+    pull_once(inbox=second, store=store, passphrase=PASS)
+
+    assert [row["id"] for row in store.list_review_items("under_review")] == ["D-1"]
+
+
+def test_a_late_classification_after_a_decision_is_ignored(tmp_path):
+    inbox = MemInbox()
+    inbox.add("drive-1", _document("D-1", "quick"))
+    inbox.add("drive-2", _classification("D-1", **REVIEW))
+    store = Store(tmp_path)
+    pull_once(inbox=inbox, store=store, passphrase=PASS)
+    store.decide("D-1", decision="approve", decided_by="desktop", decided_at="t")
+
+    inbox.add("drive-3", _classification("D-1", **{**REVIEW, "title": "ورودی"}))
+    report = pull_once(inbox=inbox, store=store, passphrase=PASS)
+
+    assert report.failed == []
+    assert store.list_review_items("approved")[0]["title"] == "خرید زمین"
+
+
+def test_daily_report_calendar_is_kept_in_details(tmp_path):
+    inbox = MemInbox()
+    inbox.add("drive-1", {"kind": "daily_report", "id": "D-10", "report_date": "1405-07-24",
+                          "body": "بتن ریزی", "calendar": "jalali"})
+    store = Store(tmp_path)
+    pull_once(inbox=inbox, store=store, passphrase=PASS)
+    assert store.list_daily_reports()[0]["details"] == {"calendar": "jalali"}
+
+
+def test_classification_keeps_the_event_date_and_amount(tmp_path):
+    store = Store(tmp_path)
+    store.create_review_item(item_id="D-1")
+    store.classify("D-1", title="خرید زمین", transaction_type="چک", document_kind="financial",
+                   event_date="1405-07-24", amount="250000000")
+    row = store.list_review_items("under_review")[0]
+    assert (row["event_date"], row["amount"]) == ("1405-07-24", "250000000")

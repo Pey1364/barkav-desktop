@@ -4,14 +4,25 @@ import { PAYMENT_METHODS, TRANSACTION_TITLES } from "../data/taxonomy";
 import { CloseIcon } from "../icons";
 import { toFa } from "../lib/digits";
 import { persianDateInput } from "../lib/persianDate";
+import type { ReviewInput } from "../sync/service";
 
 type Step = "photos" | "mode" | "structure" | "title" | "method" | "details" | "kind";
 
+export interface CaptureResult {
+  mode: "quick" | "detailed";
+  caption: string;
+  photos: File[];
+  review?: ReviewInput;
+  /** Set when a quick document is completed: only its classification is sent. */
+  editingId?: string;
+}
+
 interface Props {
-  /** An item from the quick list being completed; null for a new document. */
+  /** A quick document being completed; null for a new one. */
   editing: FieldItem | null;
+  busy: boolean;
   onClose: () => void;
-  onSaved: (item: FieldItem) => void;
+  onSubmit: (result: CaptureResult) => void;
   onDailyReport: () => void;
 }
 
@@ -32,17 +43,13 @@ const PREVIOUS: Partial<Record<Step, Step>> = {
 // Only the detailed path has numbered steps: title 1, method 2, details 3, kind 4.
 const DETAIL_NUMBER: Partial<Record<Step, number>> = { title: 1, method: 2, details: 3, kind: 4 };
 
-function nowTime(): string {
-  return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date());
-}
-
-export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props) {
+export function CaptureFlow({ editing, busy, onClose, onSubmit, onDailyReport }: Props) {
   const [step, setStep] = useState<Step>(editing ? "structure" : "photos");
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [caption, setCaption] = useState(editing?.caption ?? "");
+  const [caption, setCaption] = useState("");
   const [title, setTitle] = useState("");
   const [method, setMethod] = useState("");
-  const [date, setDate] = useState(persianDateInput());
+  const [eventDate, setEventDate] = useState(persianDateInput());
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState<"financial" | "non_financial" | "">("");
 
@@ -70,16 +77,23 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
     });
   }
 
-  function finish(status: FieldItem["status"], mode: FieldItem["mode"]) {
-    const id = editing?.id ?? `new-${Date.now()}`;
-    onSaved({
-      id,
+  function submitQuick() {
+    onSubmit({ mode: "quick", caption: caption.trim(), photos: photos.map((photo) => photo.file) });
+  }
+
+  function submitDetailed() {
+    onSubmit({
+      mode: "detailed",
       caption: caption.trim(),
-      time: nowTime(),
-      day: "today",
-      mode,
-      status,
-      photos: photoCount,
+      photos: photos.map((photo) => photo.file),
+      editingId: editing?.id,
+      review: {
+        title,
+        method,
+        eventDate,
+        amount: title === "یادداشت" ? "" : amount,
+        documentKind: kind === "financial" ? "financial" : "non_financial",
+      },
     });
   }
 
@@ -91,8 +105,8 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
     <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-label="ثبت سند">
       <div className="sheet">
         <div className="sheet-head">
-          <h3>{editing ? "ویرایش سند" : "سند جدید"}</h3>
-          <button className="icon-btn" type="button" aria-label="بستن" onClick={onClose}>
+          <h3>{editing ? "تکمیل سند" : "سند جدید"}</h3>
+          <button className="icon-btn" type="button" aria-label="بستن" onClick={onClose} disabled={busy}>
             <CloseIcon />
           </button>
         </div>
@@ -148,11 +162,11 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
           <>
             <p className="step-label">{toFa(photoCount)} عکس آماده است</p>
             <div className="choice-grid">
-              <button className="choice" type="button" onClick={() => finish("pending", "quick")}>
+              <button className="choice" type="button" disabled={busy} onClick={submitQuick}>
                 <strong>ثبت سریع</strong>
                 <small>فقط عکس‌ها و شرح سند. سند در پندینگ می‌ماند و بعداً گزینه‌ها پیشنهاد می‌شود.</small>
               </button>
-              <button className="choice" type="button" onClick={() => setStep("structure")}>
+              <button className="choice" type="button" disabled={busy} onClick={() => setStep("structure")}>
                 <strong>ثبت با جزئیات</strong>
                 <small>دسته‌بندی را مرحله‌به‌مرحله پر می‌کنی و سند مستقیم به بازبینی می‌رود.</small>
               </button>
@@ -219,8 +233,8 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
         {step === "details" && (
           <>
             <div className="field">
-              <label htmlFor="date">تاریخ شمسی</label>
-              <input id="date" className="input" inputMode="numeric" value={date} onChange={(event) => setDate(event.target.value)} />
+              <label htmlFor="event-date">تاریخ شمسی</label>
+              <input id="event-date" className="input" inputMode="numeric" value={eventDate} onChange={(event) => setEventDate(event.target.value)} />
               <small>تاریخ اجرای تراکنش؛ پیش‌فرض امروز است.</small>
             </div>
             <div className="field">
@@ -234,10 +248,6 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
                 onChange={(event) => setAmount(event.target.value)}
               />
               {amountLocked && <small>برای یادداشت مبلغ لازم نیست.</small>}
-            </div>
-            <div className="field">
-              <label htmlFor="caption-detail">شرح سند</label>
-              <textarea id="caption-detail" className="textarea" value={caption} onChange={(event) => setCaption(event.target.value)} />
             </div>
           </>
         )}
@@ -260,7 +270,7 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
 
         <div className="actions">
           {back && (
-            <button className="btn-ghost" type="button" onClick={() => setStep(back)}>
+            <button className="btn-ghost" type="button" disabled={busy} onClick={() => setStep(back)}>
               قبلی
             </button>
           )}
@@ -280,8 +290,8 @@ export function CaptureFlow({ editing, onClose, onSaved, onDailyReport }: Props)
             </button>
           )}
           {step === "kind" && (
-            <button className="btn-primary" type="button" disabled={!kind} onClick={() => finish("review", "detailed")}>
-              ثبت برای بازبینی
+            <button className="btn-primary" type="button" disabled={!kind || busy} onClick={submitDetailed}>
+              {busy ? "در حال ارسال…" : "ثبت برای بازبینی"}
             </button>
           )}
         </div>
