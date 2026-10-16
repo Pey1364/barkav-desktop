@@ -7,6 +7,8 @@ picked. The inbox folder is created once and its id is stored locally.
 
 from __future__ import annotations
 
+import json
+import secrets
 from typing import Callable
 
 import httpx
@@ -15,6 +17,7 @@ from .intake import RemoteItem
 from .oauth import OAuthError
 
 DRIVE_API = "https://www.googleapis.com/drive/v3"
+UPLOAD_API = "https://www.googleapis.com/upload/drive/v3"
 FOLDER_NAME = "BARKAV Field Inbox"
 FOLDER_MIME = "application/vnd.google-apps.folder"
 
@@ -70,6 +73,51 @@ class DriveInbox:
             )
         )
         return response.content
+
+
+def upload_file(*, http: httpx.Client, token: Callable[[], str], folder_id: str, name: str, content: bytes) -> str:
+    """Create a file in the folder with one multipart request and return its id."""
+    boundary = f"barkav-{secrets.token_hex(12)}"
+    metadata = json.dumps({"name": name, "parents": [folder_id]}).encode("utf-8")
+    body = b"".join(
+        [
+            f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n".encode("ascii"),
+            metadata,
+            f"\r\n--{boundary}\r\nContent-Type: application/octet-stream\r\n\r\n".encode("ascii"),
+            content,
+            f"\r\n--{boundary}--\r\n".encode("ascii"),
+        ]
+    )
+    headers = {
+        "Authorization": f"Bearer {token()}",
+        "Content-Type": f"multipart/related; boundary={boundary}",
+    }
+    response = _check(
+        http.post(
+            f"{UPLOAD_API}/files",
+            params={"uploadType": "multipart", "fields": "id"},
+            content=body,
+            headers=headers,
+            timeout=120,
+        )
+    )
+    file_id = response.json().get("id")
+    if not file_id:
+        raise DriveError("Drive did not return the uploaded file id")
+    return str(file_id)
+
+
+def trash_file(*, http: httpx.Client, token: Callable[[], str], file_id: str) -> None:
+    """Move one file to Drive Trash (recoverable). Used only to clean up test entries."""
+    _check(
+        http.patch(
+            f"{DRIVE_API}/files/{file_id}",
+            params={"fields": "id"},
+            json={"trashed": True},
+            headers={"Authorization": f"Bearer {token()}"},
+            timeout=30,
+        )
+    )
 
 
 def find_or_create_folder(*, http: httpx.Client, token: Callable[[], str], name: str = FOLDER_NAME) -> str:

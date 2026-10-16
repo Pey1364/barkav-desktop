@@ -44,6 +44,9 @@ def _folder_id(http: httpx.Client, token) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Windows consoles can use a legacy code page that cannot print Persian; use UTF-8.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="BARKAV Field: sign in and pull entries.")
     parser.add_argument("command", nargs="?", default="pull", choices=["pull", "signin"])
     args = parser.parse_args(argv)

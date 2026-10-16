@@ -21,3 +21,8 @@ dist/
 
 # Local Google OAuth settings with real values (never commit)
 backend/local_config.json
+
+# Google downloaded client files (contain client secrets; never commit)
+client_secret*.json
+client secret*.txt
+*client_secret*

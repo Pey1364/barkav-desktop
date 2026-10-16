@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from barkav_field import envelope, oauth
-from barkav_field.drive import DriveError, DriveInbox, find_or_create_folder
+from barkav_field.drive import DriveError, DriveInbox, find_or_create_folder, trash_file, upload_file
 from barkav_field.intake import pull_once
 from barkav_field.store import Store
 
@@ -153,7 +153,7 @@ class FakeDrive:
                 return httpx.Response(200, json={"files": matches})
             folder = q.split("'")[1]
             items = sorted(
-                ((fid, f) for fid, f in self.files.items() if f["folder"] == folder),
+                ((fid, f) for fid, f in self.files.items() if f["folder"] == folder and not f.get("trashed")),
                 key=lambda pair: pair[1]["created"],
             )
             start = int(params.get("pageToken", "0"))
@@ -171,6 +171,23 @@ class FakeDrive:
         if request.method == "GET" and path.startswith("/drive/v3/files/"):
             file_id = path.rsplit("/", 1)[1]
             return httpx.Response(200, content=self.files[file_id]["content"])
+        if request.method == "POST" and path == "/upload/drive/v3/files":
+            boundary = request.headers["content-type"].split("boundary=")[1].encode("ascii")
+            parts = request.content.split(b"--" + boundary)
+            metadata = json.loads(parts[1].split(b"\r\n\r\n", 1)[1][:-2])
+            content = parts[2].split(b"\r\n\r\n", 1)[1][:-2]
+            file_id = f"upload-{len(self.files) + 1}"
+            self.files[file_id] = {
+                "folder": metadata["parents"][0],
+                "name": metadata["name"],
+                "content": content,
+                "created": f"2026-10-16T11:00:{len(self.files):02d}Z",
+            }
+            return httpx.Response(200, json={"id": file_id})
+        if request.method == "PATCH" and path.startswith("/drive/v3/files/"):
+            file_id = path.rsplit("/", 1)[1]
+            self.files[file_id]["trashed"] = bool(json.loads(request.content).get("trashed"))
+            return httpx.Response(200, json={"id": file_id})
         return httpx.Response(404, json={"error": "not found"})
 
 
@@ -244,3 +261,52 @@ def test_drive_adapter_does_not_import_the_legacy_app():
         elif isinstance(node, ast.ImportFrom):
             names.add(node.module or "")
     assert not any(n.startswith(("finance_db", "barkav", "tkinter", "telegram")) for n in names)
+
+
+def test_upload_creates_the_file_in_the_folder_with_its_bytes():
+    fake = FakeDrive()
+    client = _client(fake.handler)
+
+    file_id = upload_file(http=client, token=_token, folder_id="F", name="entry.json", content=b"sealed-bytes")
+
+    assert fake.files[file_id]["folder"] == "F"
+    assert fake.files[file_id]["name"] == "entry.json"
+    assert fake.files[file_id]["content"] == b"sealed-bytes"
+
+
+def test_trashed_file_leaves_the_listing_but_is_not_deleted():
+    fake = FakeDrive()
+    client = _client(fake.handler)
+    inbox = DriveInbox(http=client, token=_token, folder_id="F")
+    file_id = upload_file(http=client, token=_token, folder_id="F", name="entry.json", content=b"x")
+    assert [item.remote_id for item in inbox.list_items()] == [file_id]
+
+    trash_file(http=client, token=_token, file_id=file_id)
+
+    assert list(inbox.list_items()) == []
+    assert fake.files[file_id]["content"] == b"x"
+
+
+def test_upload_failure_is_a_drive_error():
+    def handler(request):
+        return httpx.Response(403, json={"error": "forbidden"})
+
+    with pytest.raises(DriveError):
+        upload_file(http=_client(handler), token=_token, folder_id="F", name="entry.json", content=b"x")
+
+
+def test_upload_then_pull_round_trip(tmp_path):
+    fake = FakeDrive()
+    client = _client(fake.handler)
+    sealed = envelope.seal(
+        {"kind": "receipt", "id": "R-9", "caption": "آزمایش", "received_at": "2026-10-16T12:00:00Z",
+         "image_b64": base64.b64encode(b"\xff\xd8img").decode("ascii")},
+        PASS,
+    )
+    upload_file(http=client, token=_token, folder_id="F", name="R-9.json", content=sealed)
+    inbox = DriveInbox(http=client, token=_token, folder_id="F")
+
+    report = pull_once(inbox=inbox, store=Store(tmp_path), passphrase=PASS)
+
+    assert report.stored == ["R-9"]
+    assert [r["id"] for r in Store(tmp_path).list_receipts()] == ["R-9"]
