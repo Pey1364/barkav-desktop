@@ -1,0 +1,12 @@
+{
+  "name": "BARKAV Field",
+  "short_name": "Field",
+  "description": "ثبت رسید و گزارش روزانه از میدان",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A1119",
+  "theme_color": "#0A1119"
+}
