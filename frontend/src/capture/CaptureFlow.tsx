@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { FieldItem } from "../data/sample";
 import { PAYMENT_METHODS, TRANSACTION_TITLES } from "../data/taxonomy";
 import { CloseIcon } from "../icons";
+import { formatAmount, plainAmount } from "../lib/format";
+import { formatJalali, todayJalali } from "../lib/jalali";
 import { toFa } from "../lib/digits";
-import { persianDateInput } from "../lib/persianDate";
 import type { ReviewInput } from "../sync/service";
+import { JalaliDatePicker } from "../ui/JalaliDatePicker";
 
 type Step = "photos" | "mode" | "structure" | "title" | "method" | "details" | "kind";
 
@@ -49,7 +51,7 @@ export function CaptureFlow({ editing, busy, onClose, onSubmit, onDailyReport }:
   const [caption, setCaption] = useState("");
   const [title, setTitle] = useState("");
   const [method, setMethod] = useState("");
-  const [eventDate, setEventDate] = useState(persianDateInput());
+  const [eventDate, setEventDate] = useState(formatJalali(todayJalali()));
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState<"financial" | "non_financial" | "">("");
 
@@ -234,7 +236,7 @@ export function CaptureFlow({ editing, busy, onClose, onSubmit, onDailyReport }:
           <>
             <div className="field">
               <label htmlFor="event-date">تاریخ شمسی</label>
-              <input id="event-date" className="input" inputMode="numeric" value={eventDate} onChange={(event) => setEventDate(event.target.value)} />
+              <JalaliDatePicker id="event-date" value={eventDate} onChange={setEventDate} />
               <small>تاریخ اجرای تراکنش؛ پیش‌فرض امروز است.</small>
             </div>
             <div className="field">
@@ -243,9 +245,9 @@ export function CaptureFlow({ editing, busy, onClose, onSubmit, onDailyReport }:
                 id="amount"
                 className="input"
                 inputMode="numeric"
-                value={amountLocked ? "" : amount}
+                value={amountLocked ? "" : formatAmount(amount)}
                 disabled={amountLocked}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => setAmount(plainAmount(event.target.value))}
               />
               {amountLocked && <small>برای یادداشت مبلغ لازم نیست.</small>}
             </div>

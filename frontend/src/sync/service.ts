@@ -1,12 +1,13 @@
 // What the phone sends to Google Drive and reads back. Every item is one sealed file in the inbox
 // folder; the desktop reads the same folder when it opens (FD-05, FD-12, ADR-0006 and ADR-0007).
 import type { DailyReport } from "../capture/DailyReportSheet";
-import type { FieldItem } from "../data/sample";
 import { open, seal, toBase64, type Payload } from "../crypto/envelope";
+import type { FieldItem, ReviewInfo } from "../data/sample";
 import { downloadFile, findOrCreateFolder, listFiles, uploadFile } from "../drive/drive";
 import { accessToken } from "../drive/gis";
-import { compressToJpeg } from "../media/compress";
 import { toAsciiDigits, toFa } from "../lib/digits";
+import { compressToJpeg } from "../media/compress";
+import { plainAmount } from "../lib/format";
 
 export interface ReviewInput {
   title: string;
@@ -37,8 +38,21 @@ function reviewPayload(review: ReviewInput): Payload {
     title: review.title,
     transaction_type: review.method,
     event_date: toAsciiDigits(review.eventDate).trim(),
-    amount: toAsciiDigits(review.amount).replace(/[,\s]/g, ""),
+    amount: plainAmount(review.amount),
     document_kind: review.documentKind,
+  };
+}
+
+function reviewFrom(data: unknown): ReviewInfo | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
+  const raw = data as Payload;
+  const kind = raw.document_kind === "financial" || raw.document_kind === "non_financial" ? raw.document_kind : "";
+  return {
+    title: String(raw.title ?? ""),
+    method: String(raw.transaction_type ?? ""),
+    eventDate: toFa(String(raw.event_date ?? "")),
+    amount: String(raw.amount ?? ""),
+    kind,
   };
 }
 
@@ -49,11 +63,17 @@ async function sendPayload(passphrase: string, fileName: string, payload: Payloa
 }
 
 /** A new document: photos in order, the caption, and the classification when it was detailed. */
-export async function sendDocument(passphrase: string, draft: DocumentDraft): Promise<void> {
+export async function sendDocument(
+  passphrase: string,
+  draft: DocumentDraft,
+  onProgress?: (text: string) => void,
+): Promise<void> {
   const images: string[] = [];
-  for (const photo of draft.photos) {
-    images.push(toBase64(await compressToJpeg(photo)));
+  for (let index = 0; index < draft.photos.length; index += 1) {
+    onProgress?.(`آماده‌سازی عکس ${toFa(index + 1)} از ${toFa(draft.photos.length)}…`);
+    images.push(toBase64(await compressToJpeg(draft.photos[index])));
   }
+  onProgress?.("رمزنگاری و ارسال به Drive…");
   const payload: Payload = {
     kind: "document",
     id: draft.id,
@@ -99,16 +119,18 @@ export async function sendReport(passphrase: string, report: DailyReport): Promi
   });
 }
 
-function itemFrom(payload: Payload, classified: boolean): FieldItem {
+function itemFrom(payload: Payload, classification: Payload | undefined): FieldItem {
   const quick = payload.mode === "quick";
   const images = Array.isArray(payload.images_b64) ? payload.images_b64.length : 0;
+  const review = reviewFrom(classification ?? payload.review);
   return {
     id: String(payload.id),
     caption: String(payload.caption ?? ""),
     receivedAt: String(payload.received_at),
     mode: quick ? "quick" : "detailed",
-    status: quick && !classified ? "pending" : "review",
+    status: quick && !classification && !payload.review ? "pending" : "review",
     photos: images,
+    review,
   };
 }
 
@@ -131,7 +153,7 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
 
   const documents: Payload[] = [];
   const reports: DailyReport[] = [];
-  const classified = new Set<string>();
+  const classifications = new Map<string, Payload>();
   const decisions = new Map<string, "approve" | "reject">();
   // The desktop publishes its own outcome; it is the final word, so it overrides the phone's decision.
   const desktopOutcomes = new Map<string, "approve" | "reject">();
@@ -142,8 +164,9 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
       const payload = await open(await downloadFile(token, id), passphrase);
       if (payload.kind === "document") documents.push(payload);
       else if (payload.kind === "daily_report") reports.push(reportFrom(payload));
-      else if (payload.kind === "review_classification") classified.add(String(payload.item_id));
-      else if (payload.kind === "review_decision") {
+      else if (payload.kind === "review_classification") {
+        classifications.set(String(payload.item_id), (payload.review ?? {}) as Payload);
+      } else if (payload.kind === "review_decision") {
         decisions.set(String(payload.item_id), payload.decision === "reject" ? "reject" : "approve");
       } else if (payload.kind === "review_status") {
         desktopOutcomes.set(String(payload.item_id), payload.status === "rejected" ? "reject" : "approve");
@@ -154,7 +177,7 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
   }
 
   const items = documents.reverse().map((payload) => {
-    const item = itemFrom(payload, classified.has(String(payload.id)));
+    const item = itemFrom(payload, classifications.get(String(payload.id)));
     const desktop = desktopOutcomes.get(item.id);
     if (desktop) return { ...item, status: "decided" as const, decision: desktop, decidedBy: "desktop" as const };
     const phone = decisions.get(item.id);

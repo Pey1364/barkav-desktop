@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { CONSTRUCTION_PHASES, WEATHER_OPTIONS } from "../data/taxonomy";
 import { CloseIcon } from "../icons";
-import { persianDateInput, persianLongDate } from "../lib/persianDate";
+import { formatJalali, todayJalali } from "../lib/jalali";
+import { persianLongDate } from "../lib/persianDate";
+import { JalaliDatePicker } from "../ui/JalaliDatePicker";
 
 export interface DailyReport {
   id: string;
@@ -13,12 +15,13 @@ export interface DailyReport {
 }
 
 interface Props {
+  busy: boolean;
   onClose: () => void;
   onSave: (report: DailyReport) => void;
 }
 
-export function DailyReportSheet({ onClose, onSave }: Props) {
-  const [reportDate, setReportDate] = useState(persianDateInput());
+export function DailyReportSheet({ busy, onClose, onSave }: Props) {
+  const [reportDate, setReportDate] = useState(formatJalali(todayJalali()));
   const [phase, setPhase] = useState("");
   const [weather, setWeather] = useState("");
   const [temperature, setTemperature] = useState("");
@@ -37,7 +40,7 @@ export function DailyReportSheet({ onClose, onSave }: Props) {
 
         <div className="field">
           <label htmlFor="report-date">تاریخ شمسی</label>
-          <input id="report-date" className="input" inputMode="numeric" value={reportDate} onChange={(event) => setReportDate(event.target.value)} />
+          <JalaliDatePicker id="report-date" value={reportDate} onChange={setReportDate} />
           <small>پیش‌فرض: تاریخ امروز.</small>
         </div>
 
@@ -85,7 +88,7 @@ export function DailyReportSheet({ onClose, onSave }: Props) {
           <button
             className="btn-primary"
             type="button"
-            disabled={!body.trim()}
+            disabled={!body.trim() || busy}
             onClick={() =>
               onSave({
                 id: `report-${Date.now()}`,
@@ -97,7 +100,7 @@ export function DailyReportSheet({ onClose, onSave }: Props) {
               })
             }
           >
-            ثبت گزارش
+            {busy ? "در حال ارسال…" : "ثبت گزارش"}
           </button>
         </div>
       </div>

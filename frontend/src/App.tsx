@@ -1,34 +1,36 @@
 import { useEffect, useState } from "react";
 import { CaptureFlow, type CaptureResult } from "./capture/CaptureFlow";
 import { DailyReportSheet, type DailyReport } from "./capture/DailyReportSheet";
-import { labelOf, sampleItems, type FieldItem, type ItemStatus } from "./data/sample";
-import { accessToken } from "./drive/gis";
-import { CameraIcon, DesktopIcon, GearIcon, ReceiptIcon, ReportIcon } from "./icons";
+import { DocumentsList } from "./documents/DocumentsList";
+import { sampleItems, type FieldItem } from "./data/sample";
+import { accessToken, preloadGoogle } from "./drive/gis";
+import { CameraIcon, GearIcon, ReceiptIcon, ReportIcon } from "./icons";
+import { withTimeout } from "./lib/async";
 import { toFa } from "./lib/digits";
-import { isToday, persianDateInput, persianLongDate, timeOf } from "./lib/persianDate";
+import { formatAmount } from "./lib/format";
+import { persianLongDate } from "./lib/persianDate";
 import { clearPassphrase, loadPassphrase, savePassphrase } from "./settings/passphrase";
-import {
-  loadInbox,
-  sendClassification,
-  sendDecision,
-  sendDocument,
-  sendReport,
-} from "./sync/service";
+import { ConfirmDialog } from "./ui/Confirm";
+import { loadInbox, sendClassification, sendDecision, sendDocument, sendReport } from "./sync/service";
 
-type Tab = "receipts" | "reports" | "settings";
+type Tab = "documents" | "reports" | "settings";
 
-function dotClass(status: ItemStatus): string {
-  if (status === "pending" || status === "waiting") return "wait";
-  if (status === "review") return "review";
-  return "";
-}
+const SIGN_IN_WAIT_MS = 120_000;
+const UPLOAD_WAIT_MS = 300_000;
+const SIGN_IN_FAILED = "ورود به Google انجام نشد. پنجره‌ی ورود را باز کن و دوباره امتحان کن.";
+const UPLOAD_TOO_SLOW = "ارسال زمان‌بر شد. اتصال اینترنت را بررسی کن.";
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : "خطای ناشناخته";
 }
 
+interface Dialog {
+  title: string;
+  lines: string[];
+}
+
 export function App() {
-  const [tab, setTab] = useState<Tab>("receipts");
+  const [tab, setTab] = useState<Tab>("documents");
   const [passphrase, setPassphrase] = useState<string | null>(() => loadPassphrase());
   const [passphraseDraft, setPassphraseDraft] = useState("");
   const [connected, setConnected] = useState(false);
@@ -38,16 +40,19 @@ export function App() {
   const [capture, setCapture] = useState<{ editing: FieldItem | null } | null>(null);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3200);
+    const timer = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // On start, try a silent sign-in: it only works when this app is already allowed.
+  // Load Google's script now, so a tap can open the sign-in window at once. Then try a silent sign-in.
   useEffect(() => {
+    preloadGoogle();
     if (!passphrase) return;
     accessToken(false)
       .then(() => {
@@ -63,9 +68,7 @@ export function App() {
       setItems(state.items);
       setReports(state.reports);
       setSample(false);
-      if (state.failed > 0) {
-        setToast(`${toFa(state.failed)} فایل باز نشد. عبارت عبور را بررسی کن.`);
-      }
+      if (state.failed > 0) setToast(`${toFa(state.failed)} فایل باز نشد. عبارت عبور را بررسی کن.`);
     } catch (error) {
       setToast(`فهرست خوانده نشد: ${messageOf(error)}`);
     }
@@ -73,12 +76,12 @@ export function App() {
 
   async function signIn() {
     try {
-      await accessToken(true);
+      await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
       setConnected(true);
       setToast("به Google وصل شدی.");
       if (passphrase) await refresh(passphrase);
     } catch (error) {
-      setToast(`ورود انجام نشد: ${messageOf(error)}`);
+      setToast(messageOf(error));
     }
   }
 
@@ -96,7 +99,7 @@ export function App() {
       savePassphrase(value);
       setPassphrase(value);
       setPassphraseDraft("");
-      setToast("عبارت عبور روی همین گوشی ذخیره شد.");
+      setDialog({ title: "عبارت عبور ذخیره شد", lines: ["روی همین گوشی ذخیره شد و به Google فرستاده نمی‌شود."] });
       if (connected) void refresh(value);
     } catch (error) {
       setToast(messageOf(error));
@@ -117,16 +120,44 @@ export function App() {
     }
     setBusy(true);
     try {
+      // Sign in first, while the tap is still fresh; a window opened after a long wait is blocked.
+      setProgress("ورود به Google…");
+      await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
+
       if (result.editingId && result.review) {
-        await sendClassification(pass, result.editingId, result.review);
         const editedId = result.editingId;
+        const review = result.review;
+        setProgress("رمزنگاری و ارسال…");
+        await withTimeout(sendClassification(pass, editedId, review), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
         setItems((current) =>
-          current.map((item) => (item.id === editedId ? { ...item, mode: "detailed", status: "review" } : item)),
+          current.map((item) =>
+            item.id === editedId
+              ? {
+                  ...item,
+                  status: "review",
+                  review: {
+                    title: review.title,
+                    method: review.method,
+                    eventDate: review.eventDate,
+                    amount: review.amount,
+                    kind: review.documentKind,
+                  },
+                }
+              : item,
+          ),
         );
-        setToast("سند تکمیل شد و برای بازبینی ارسال شد.");
+        setCapture(null);
+        setDialog({
+          title: "سند تکمیل شد",
+          lines: [`${review.title} · ${review.method}`, "سند برای بازبینی ارسال شد."],
+        });
       } else {
         const id = crypto.randomUUID();
-        await sendDocument(pass, { id, mode: result.mode, caption: result.caption, photos: result.photos, review: result.review });
+        await withTimeout(
+          sendDocument(pass, { id, mode: result.mode, caption: result.caption, photos: result.photos, review: result.review }, setProgress),
+          UPLOAD_WAIT_MS,
+          UPLOAD_TOO_SLOW,
+        );
         const item: FieldItem = {
           id,
           caption: result.caption,
@@ -134,21 +165,65 @@ export function App() {
           mode: result.mode,
           status: result.mode === "quick" ? "pending" : "review",
           photos: result.photos.length,
+          review: result.review
+            ? {
+                title: result.review.title,
+                method: result.review.method,
+                eventDate: result.review.eventDate,
+                amount: result.review.amount,
+                kind: result.review.documentKind,
+              }
+            : undefined,
         };
-        // The first real document replaces the example items.
         setItems((current) => (sample ? [item] : [item, ...current]));
         setSample(false);
-        setToast(
+        setCapture(null);
+        setDialog(
           result.mode === "quick"
-            ? "ثبت سریع رمزشده و ارسال شد؛ در پندینگ است."
-            : "سند رمزشده و برای بازبینی ارسال شد.",
+            ? {
+                title: "ثبت سریع انجام شد",
+                lines: [`${toFa(result.photos.length)} عکس با شرح ذخیره شد.`, "سند در پندینگ است؛ بعداً می‌توانی تکمیلش کنی."],
+              }
+            : {
+                title: "سند ثبت شد",
+                lines: [
+                  `${result.review?.title ?? ""} · ${result.review?.method ?? ""}`,
+                  result.review?.amount ? `مبلغ: ${formatAmount(result.review.amount)} ریال` : "",
+                  "سند برای بازبینی ارسال شد.",
+                ].filter(Boolean),
+              },
         );
       }
-      setCapture(null);
     } catch (error) {
       setToast(`ارسال انجام نشد: ${messageOf(error)}`);
     } finally {
       setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  async function decide(item: FieldItem, decision: "approve" | "reject") {
+    const pass = requirePassphrase();
+    if (!pass) return;
+    setBusy(true);
+    setProgress("ارسال تصمیم…");
+    try {
+      await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
+      await withTimeout(sendDecision(pass, item.id, decision), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
+      setItems((current) =>
+        current.map((existing) =>
+          existing.id === item.id ? { ...existing, status: "decided", decision, decidedBy: "phone" } : existing,
+        ),
+      );
+      setDialog({
+        title: decision === "approve" ? "تأیید ثبت شد" : "رد ثبت شد",
+        lines: [`${item.caption || "سند"} ${decision === "approve" ? "تأیید" : "رد"} شد.`, "دسکتاپ بعد از خواندن، همین وضعیت را نشان می‌دهد."],
+      });
+    } catch (error) {
+      setToast(`تصمیم ارسال نشد: ${messageOf(error)}`);
+    } finally {
+      setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -159,40 +234,20 @@ export function App() {
       return;
     }
     setBusy(true);
+    setProgress("ارسال گزارش…");
     try {
-      await sendReport(pass, report);
+      await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
+      await withTimeout(sendReport(pass, report), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
       setReports((current) => [report, ...current]);
       setDailyOpen(false);
-      setToast("گزارش روزانه رمزشده و ارسال شد.");
+      setDialog({ title: "گزارش روزانه ثبت شد", lines: [`${report.reportDate} · ${report.phase || "بدون فاز"}`] });
     } catch (error) {
       setToast(`ارسال گزارش انجام نشد: ${messageOf(error)}`);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
-
-  async function decide(item: FieldItem, decision: "approve" | "reject") {
-    const pass = requirePassphrase();
-    if (!pass) return;
-    setBusy(true);
-    try {
-      await sendDecision(pass, item.id, decision);
-      setItems((current) =>
-        current.map((existing) =>
-          existing.id === item.id ? { ...existing, status: "decided", decision, decidedBy: "phone" } : existing,
-        ),
-      );
-      setToast(decision === "approve" ? "تأیید از گوشی ارسال شد." : "رد از گوشی ارسال شد.");
-    } catch (error) {
-      setToast(`تصمیم ارسال نشد: ${messageOf(error)}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const todayCount = items.filter((item) => isToday(item.receivedAt)).length;
-  const waitingCount = items.filter((item) => item.status === "waiting" || item.status === "pending").length;
-  const todayReport = reports.some((report) => report.reportDate === persianDateInput());
 
   return (
     <div className="app">
@@ -205,84 +260,38 @@ export function App() {
         </div>
       </header>
 
-      {tab === "receipts" && (
+      {tab === "documents" && (
         <>
           <section className="glass hero">
             <p className="kicker">{persianLongDate()}</p>
-            <h2>رسید را از میدان بفرست</h2>
-            <button className="btn-primary" type="button" onClick={() => setCapture({ editing: null })}>
-              <CameraIcon /> ثبت رسید
+            <button className="btn-primary" type="button" disabled={busy} onClick={() => setCapture({ editing: null })}>
+              <CameraIcon /> ثبت سند جدید
             </button>
-          </section>
-
-          <section className="stats">
-            <div className="glass stat">
-              <ReceiptIcon />
-              <b>{toFa(todayCount)}</b>
-              <small>سند امروز</small>
-            </div>
-            <div className="glass stat">
-              <DesktopIcon />
-              <b>{toFa(waitingCount)}</b>
-              <small>منتظر دسکتاپ یا پندینگ</small>
-            </div>
           </section>
 
           {sample && (
-            <p className="empty">
-              نمایشی. برای دیدن سندهای واقعی، از تنظیمات وارد Google شو و عبارت عبور را ذخیره کن.
-            </p>
+            <p className="empty">نمایشی. برای دیدن سندهای واقعی، از تنظیمات وارد Google شو و عبارت عبور را ذخیره کن.</p>
           )}
 
-          <h3 className="section-title">آخرین اسناد</h3>
-          {items.length === 0 ? (
-            <p className="empty">هنوز سندی ثبت نشده است.</p>
-          ) : (
-            <ul className="list">
-              {items.map((item) => (
-                <li className="glass item" key={item.id}>
-                  <span className={`dot ${dotClass(item.status)}`} aria-hidden="true" />
-                  <div className="item-body">
-                    <strong>{item.caption || "بدون شرح"}</strong>
-                    <small>
-                      {toFa(timeOf(item.receivedAt))} · {labelOf(item)} · {toFa(item.photos)} عکس
-                    </small>
-                    {item.status === "review" && !sample && (
-                      <div className="actions">
-                        <button className="btn-ghost" type="button" disabled={busy} onClick={() => decide(item, "approve")}>
-                          تأیید
-                        </button>
-                        <button className="btn-ghost" type="button" disabled={busy} onClick={() => decide(item, "reject")}>
-                          رد
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {item.status === "pending" && !sample && (
-                    <button className="btn-ghost" type="button" disabled={busy} onClick={() => setCapture({ editing: item })}>
-                      تکمیل
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <section className="glass report-card">
-            <div>
-              <strong>گزارش روزانه</strong>
-              <small>{todayReport ? "امروز ثبت شده است" : "برای امروز هنوز نوشته نشده"}</small>
-            </div>
-            <button className="btn-ghost" type="button" onClick={() => setDailyOpen(true)}>
-              نوشتن
-            </button>
-          </section>
+          <DocumentsList
+            items={items}
+            sample={sample}
+            busy={busy}
+            onComplete={(item) => setCapture({ editing: item })}
+            onDecide={decide}
+          />
         </>
       )}
 
       {tab === "reports" && (
         <>
-          <h3 className="section-title">گزارش‌های روزانه</h3>
+          <section className="glass hero">
+            <p className="kicker">{persianLongDate()}</p>
+            <button className="btn-primary" type="button" disabled={busy} onClick={() => setDailyOpen(true)}>
+              ثبت گزارش روزانه
+            </button>
+          </section>
+          <h3 className="section-title">گزارش‌های ثبت‌شده</h3>
           {reports.length === 0 ? (
             <p className="empty">هنوز گزارشی ثبت نشده است.</p>
           ) : (
@@ -301,9 +310,6 @@ export function App() {
               ))}
             </ul>
           )}
-          <button className="btn-primary" type="button" onClick={() => setDailyOpen(true)}>
-            گزارش جدید
-          </button>
         </>
       )}
 
@@ -319,7 +325,7 @@ export function App() {
                 </button>
               )}
               {connected && passphrase && (
-                <button className="btn-ghost" type="button" onClick={() => refresh(passphrase)}>
+                <button className="btn-ghost" type="button" onClick={() => passphrase && refresh(passphrase)}>
                   به‌روزرسانی فهرست
                 </button>
               )}
@@ -330,7 +336,7 @@ export function App() {
             <strong>عبارت عبور</strong>
             <p>
               {passphrase
-                ? "روی همین گوشی ذخیره شده است. هیچ‌جا جز این مرورگر نیست و به Google فرستاده نمی‌شود."
+                ? "روی همین گوشی ذخیره شده است. به Google فرستاده نمی‌شود."
                 : "این عبارت را یک بار وارد کن. فقط روی همین گوشی می‌ماند. اگر آن را گم کنی، سندهای رمزشده قابل خواندن نیستند."}
             </p>
             {!passphrase && (
@@ -364,13 +370,13 @@ export function App() {
 
       <nav className="tabs" aria-label="بخش‌ها">
         <div className="glass tabs-inner">
-          <button type="button" className={tab === "receipts" ? "on" : ""} onClick={() => setTab("receipts")}>
+          <button type="button" className={tab === "documents" ? "on" : ""} onClick={() => setTab("documents")}>
             <ReceiptIcon />
-            رسیدها
+            سندها
           </button>
           <button type="button" className={tab === "reports" ? "on" : ""} onClick={() => setTab("reports")}>
             <ReportIcon />
-            گزارش
+            گزارش روزانه
           </button>
           <button type="button" className={tab === "settings" ? "on" : ""} onClick={() => setTab("settings")}>
             <GearIcon />
@@ -392,13 +398,21 @@ export function App() {
         />
       )}
 
-      {dailyOpen && <DailyReportSheet onClose={() => setDailyOpen(false)} onSave={submitDaily} />}
+      {dailyOpen && <DailyReportSheet busy={busy} onClose={() => setDailyOpen(false)} onSave={submitDaily} />}
 
-      {toast && (
+      {busy && progress && (
+        <div className="toast progress" role="status">
+          {progress}
+        </div>
+      )}
+
+      {toast && !busy && (
         <div className="toast" role="status">
           {toast}
         </div>
       )}
+
+      {dialog && <ConfirmDialog title={dialog.title} lines={dialog.lines} onClose={() => setDialog(null)} />}
     </div>
   );
 }

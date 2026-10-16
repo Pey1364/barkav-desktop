@@ -53,6 +53,11 @@ function loadGis(): Promise<void> {
   return scriptLoaded;
 }
 
+/** Load Google's script early, so the sign-in window can open on the user's tap. */
+export function preloadGoogle(): void {
+  loadGis().catch(() => undefined);
+}
+
 /**
  * Return an access token. `interactive` allows Google's sign-in window (it must follow a tap);
  * a silent request only succeeds when the user already allowed this app.

@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { PAYMENT_METHODS, TRANSACTION_TITLES } from "../data/taxonomy";
-import { toAsciiDigits, toFa } from "../lib/digits";
-import { persianDateInput } from "../lib/persianDate";
+import { toFa } from "../lib/digits";
+import { formatAmount, plainAmount } from "../lib/format";
+import { formatJalali, todayJalali } from "../lib/jalali";
+import { ConfirmDialog } from "../ui/Confirm";
+import { JalaliDatePicker } from "../ui/JalaliDatePicker";
 import { api, type ClassifyInput, type DocumentRow, type ReportRow, type ReviewRow } from "./api";
 
-type Tab = "review" | "new" | "documents" | "reports";
+type Tab = "documents" | "review" | "new" | "reports";
+
+interface Dialog {
+  title: string;
+  lines: string[];
+}
 
 interface Row {
   doc: DocumentRow;
@@ -52,7 +60,7 @@ function DocumentCard({ row, children }: { row: Row; children?: ReactElement | n
         <p className="desk-summary">
           {review.title} · {review.transaction_type}
           {review.event_date ? ` · ${toFa(review.event_date.replace(/-/g, "/"))}` : ""}
-          {review.amount ? ` · ${toFa(review.amount)} ریال` : ""} ·{" "}
+          {review.amount ? ` · ${formatAmount(review.amount)} ریال` : ""} ·{" "}
           {review.document_kind === "financial" ? "سند مالی" : "سند غیرمالی"}
         </p>
       )}
@@ -64,7 +72,7 @@ function DocumentCard({ row, children }: { row: Row; children?: ReactElement | n
 function ClassifyForm({ docId, onDone, onError }: { docId: string; onDone: () => void; onError: (text: string) => void }) {
   const [title, setTitle] = useState("");
   const [method, setMethod] = useState("");
-  const [eventDate, setEventDate] = useState(persianDateInput());
+  const [eventDate, setEventDate] = useState(formatJalali(todayJalali()));
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState<"financial" | "non_financial" | "">("");
   const [saving, setSaving] = useState(false);
@@ -76,8 +84,8 @@ function ClassifyForm({ docId, onDone, onError }: { docId: string; onDone: () =>
       title,
       transaction_type: method,
       document_kind: kind,
-      event_date: toAsciiDigits(eventDate).trim(),
-      amount: amountLocked ? "" : toAsciiDigits(amount).replace(/[,\s]/g, ""),
+      event_date: eventDate.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\//g, "-").trim(),
+      amount: amountLocked ? "" : plainAmount(amount),
     };
     setSaving(true);
     try {
@@ -117,16 +125,16 @@ function ClassifyForm({ docId, onDone, onError }: { docId: string; onDone: () =>
         </label>
         <label className="field">
           <span>تاریخ شمسی</span>
-          <input className="input" inputMode="numeric" value={eventDate} onChange={(event) => setEventDate(event.target.value)} />
+          <JalaliDatePicker id={`date-${docId}`} value={eventDate} onChange={setEventDate} />
         </label>
         <label className="field">
           <span>مبلغ (ریال)</span>
           <input
             className="input"
             inputMode="numeric"
-            value={amountLocked ? "" : amount}
+            value={amountLocked ? "" : formatAmount(amount)}
             disabled={amountLocked}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => setAmount(plainAmount(event.target.value))}
           />
         </label>
       </div>
@@ -153,11 +161,12 @@ function ClassifyForm({ docId, onDone, onError }: { docId: string; onDone: () =>
 }
 
 export function DesktopApp() {
-  const [tab, setTab] = useState<Tab>("review");
+  const [tab, setTab] = useState<Tab>("documents");
   const [rows, setRows] = useState<Row[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -180,11 +189,14 @@ export function DesktopApp() {
     setBusy(true);
     try {
       await api.decide(docId, decision);
-      setNotice(
-        decision === "approve"
-          ? "تأیید شد. با اجرای pull به گوشی فرستاده می‌شود. وارد ۱۹.۱.۱ نمی‌شود (FD-08 بعد از انتقال ۱۹.۱.۱)."
-          : "رد شد. با اجرای pull به گوشی فرستاده می‌شود.",
-      );
+      setDialog({
+        title: decision === "approve" ? "تأیید ثبت شد" : "رد ثبت شد",
+        lines: [
+          decision === "approve" ? "سند تأیید شد." : "سند رد شد.",
+          "به گوشی با اجرای «pull-from-drive» فرستاده می‌شود.",
+          "این تأیید هنوز سندی را وارد ۱۹.۱.۱ نمی‌کند.",
+        ],
+      });
       await load();
     } catch (exception) {
       setNotice(`تصمیم ثبت نشد: ${errorText(exception)}`);
@@ -221,14 +233,14 @@ export function DesktopApp() {
       )}
 
       <nav className="desk-tabs" aria-label="بخش‌ها">
+        <button type="button" className={tab === "documents" ? "on" : ""} onClick={() => setTab("documents")}>
+          سندها ({toFa(rows.length)})
+        </button>
         <button type="button" className={tab === "review" ? "on" : ""} onClick={() => setTab("review")}>
           در دست بررسی ({toFa(reviewRows.length)})
         </button>
         <button type="button" className={tab === "new" ? "on" : ""} onClick={() => setTab("new")}>
           پندینگ ({toFa(newRows.length)})
-        </button>
-        <button type="button" className={tab === "documents" ? "on" : ""} onClick={() => setTab("documents")}>
-          همه‌ی اسناد ({toFa(rows.length)})
         </button>
         <button type="button" className={tab === "reports" ? "on" : ""} onClick={() => setTab("reports")}>
           گزارش‌ها ({toFa(reports.length)})
@@ -265,7 +277,10 @@ export function DesktopApp() {
               <ClassifyForm
                 docId={row.doc.id}
                 onDone={() => {
-                  setNotice("دسته‌بندی ثبت شد و سند در دست بررسی است.");
+                  setDialog({
+                    title: "دسته‌بندی ثبت شد",
+                    lines: ["سند به «در دست بررسی» رفت.", "برای تأیید یا رد، به همان بخش برو."],
+                  });
                   void load();
                 }}
                 onError={(text) => setNotice(`ثبت نشد: ${text}`)}
@@ -283,6 +298,8 @@ export function DesktopApp() {
           ))}
         </section>
       )}
+
+      {dialog && <ConfirmDialog title={dialog.title} lines={dialog.lines} onClose={() => setDialog(null)} />}
 
       {tab === "reports" && (
         <section className="desk-list">

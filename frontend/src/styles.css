@@ -745,3 +745,129 @@ button {
 .desk .actions .btn-primary {
   flex: 0 0 auto;
 }
+
+/* Jalali date field: calendar opens below, right to left, beside the text box */
+.jdp {
+  position: relative;
+}
+
+.jdp-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jdp-field .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.jdp-pop {
+  position: absolute;
+  z-index: 30;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  width: min(100%, 300px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg);
+}
+
+.jdp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.jdp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.jdp-weekdays span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.jdp-day {
+  padding: 8px 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.jdp-day:hover {
+  background: var(--card-strong);
+}
+
+.jdp-day.today {
+  outline: 1px solid var(--accent);
+}
+
+.jdp-day.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 700;
+}
+
+/* confirmation window */
+.sheet-backdrop.centered {
+  align-items: center;
+  padding: 16px;
+}
+
+.dialog {
+  width: min(100%, 380px);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.dialog h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.dialog .btn-primary {
+  margin-top: 6px;
+}
+
+/* progress while sending (shown above the tabs) */
+.toast.progress {
+  bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  color: var(--accent-ink);
+}
+
+/* documents list */
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-item {
+  align-items: flex-start;
+}
+
+.doc-item .item-body small {
+  line-height: 1.7;
+}
