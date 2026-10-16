@@ -8,6 +8,7 @@ already read, so a second pull never duplicates an entry.
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -27,7 +28,8 @@ CREATE TABLE IF NOT EXISTS daily_reports (
     id TEXT PRIMARY KEY,
     report_date TEXT NOT NULL,
     body TEXT NOT NULL,
-    imported_at TEXT NOT NULL
+    imported_at TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '{}'
 );
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(report_date);
 CREATE TABLE IF NOT EXISTS seen_remote (
@@ -48,8 +50,23 @@ CREATE TABLE IF NOT EXISTS review_items (
     decided_at TEXT,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    mode TEXT NOT NULL CHECK (mode IN ('quick', 'detailed')),
+    caption TEXT NOT NULL DEFAULT '',
+    received_at TEXT NOT NULL,
+    imported_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS document_images (
+    document_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    image_path TEXT NOT NULL,
+    image_sha256 TEXT NOT NULL,
+    PRIMARY KEY (document_id, position)
+);
 """
 
+DOCUMENT_MODES = ("quick", "detailed")
 DOCUMENT_KINDS = ("financial", "non_financial")
 DECISIONS = {"approve": "approved", "reject": "rejected"}
 DECIDERS = ("phone", "desktop")
@@ -90,6 +107,14 @@ class Store:
         self.images_dir.mkdir(parents=True, exist_ok=True)
         with self._connect() as con:
             con.executescript(SCHEMA)
+            self._migrate(con)
+
+    @staticmethod
+    def _migrate(con: sqlite3.Connection) -> None:
+        """Add columns that older databases do not have yet. Idempotent."""
+        columns = {row["name"] for row in con.execute("PRAGMA table_info(daily_reports)")}
+        if "details" not in columns:
+            con.execute("ALTER TABLE daily_reports ADD COLUMN details TEXT NOT NULL DEFAULT '{}'")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -131,20 +156,54 @@ class Store:
 
     # daily reports ------------------------------------------------------------
 
-    def add_daily_report(self, *, report_id: str, report_date: str, body: str) -> bool:
+    def add_daily_report(self, *, report_id: str, report_date: str, body: str, details: dict | None = None) -> bool:
         with self._connect() as con:
             if con.execute("SELECT 1 FROM daily_reports WHERE id=?", (report_id,)).fetchone():
                 return False
             con.execute(
-                "INSERT INTO daily_reports(id, report_date, body, imported_at) VALUES(?,?,?,?)",
-                (report_id, report_date, body, _now()),
+                "INSERT INTO daily_reports(id, report_date, body, imported_at, details) VALUES(?,?,?,?,?)",
+                (report_id, report_date, body, _now(), json.dumps(details or {}, ensure_ascii=False)),
             )
         return True
 
     def list_daily_reports(self) -> list[dict]:
         with self._connect() as con:
             rows = con.execute(
-                "SELECT id, report_date, body, imported_at FROM daily_reports ORDER BY report_date DESC, imported_at DESC"
+                "SELECT id, report_date, body, imported_at, details FROM daily_reports"
+                " ORDER BY report_date DESC, imported_at DESC"
+            ).fetchall()
+        return [{**dict(r), "details": json.loads(r["details"] or "{}")} for r in rows]
+
+    # documents (FD-13) ----------------------------------------------------------
+
+    def add_document(self, *, document_id: str, mode: str, caption: str, received_at: str, images: list[bytes]) -> bool:
+        """Store a document with its photos in order. Returns False if the id already exists."""
+        if mode not in DOCUMENT_MODES:
+            raise ValueError("document mode must be quick or detailed")
+        if not images:
+            raise ValueError("a document needs at least one photo")
+        with self._connect() as con:
+            if con.execute("SELECT 1 FROM documents WHERE id=?", (document_id,)).fetchone():
+                return False
+            con.execute(
+                "INSERT INTO documents(id, mode, caption, received_at, imported_at) VALUES(?,?,?,?,?)",
+                (document_id, mode, caption, received_at, _now()),
+            )
+            for position, image in enumerate(images, start=1):
+                relative = f"images/{document_id}-{position}.jpg"
+                (self.data_dir / relative).write_bytes(image)
+                con.execute(
+                    "INSERT INTO document_images(document_id, position, image_path, image_sha256) VALUES(?,?,?,?)",
+                    (document_id, position, relative, hashlib.sha256(image).hexdigest()),
+                )
+        return True
+
+    def list_documents(self) -> list[dict]:
+        with self._connect() as con:
+            rows = con.execute(
+                "SELECT d.id, d.mode, d.caption, d.received_at, d.imported_at,"
+                " (SELECT COUNT(*) FROM document_images i WHERE i.document_id = d.id) AS image_count"
+                " FROM documents d ORDER BY d.received_at DESC"
             ).fetchall()
         return [dict(r) for r in rows]
 

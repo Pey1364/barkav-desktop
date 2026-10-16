@@ -3,6 +3,7 @@
 Routes (all under /api/v1):
     GET  /health                          status
     GET  /receipts                        stored receipts, newest first (no image bytes)
+    GET  /documents                       stored documents with their photo counts (FD-13)
     GET  /daily-reports                   stored daily reports, newest first
     GET  /review-items?status=            review queue (FD-12), optional status filter
     POST /review-items/{id}/classify      save the wizard answers; moves the item under review
@@ -47,6 +48,10 @@ def create_app(data_dir: Path) -> FastAPI:
     @app.get("/api/v1/receipts")
     def receipts() -> list[dict]:
         return app.state.store.list_receipts()
+
+    @app.get("/api/v1/documents")
+    def documents() -> list[dict]:
+        return app.state.store.list_documents()
 
     @app.get("/api/v1/daily-reports")
     def daily_reports() -> list[dict]:

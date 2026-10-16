@@ -20,6 +20,10 @@ from . import envelope
 from .store import Store
 
 
+# Optional daily-report fields (FD-13): construction phase, weather and temperature.
+DAILY_REPORT_DETAILS = ("phase", "weather", "temperature")
+
+
 @dataclass(frozen=True)
 class RemoteItem:
     remote_id: str
@@ -64,11 +68,25 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
             decided_at=str(payload["decided_at"]),
         )
         return ("review_decision", str(payload["item_id"])) if changed else ("review_decision-duplicate", str(payload["item_id"]))
+    if kind == "document":
+        # Photos in order, plus the description; a quick document has no classification yet.
+        images = [base64.b64decode(str(item), validate=True) for item in payload["images_b64"]]
+        created = store.add_document(
+            document_id=str(payload["id"]),
+            mode=str(payload["mode"]),
+            caption=str(payload.get("caption", "")),
+            received_at=str(payload["received_at"]),
+            images=images,
+        )
+        store.create_review_item(item_id=str(payload["id"]), classification=payload.get("review"))
+        return ("document", str(payload["id"])) if created else ("document-duplicate", str(payload["id"]))
     if kind == "daily_report":
+        details = {key: payload[key] for key in DAILY_REPORT_DETAILS if payload.get(key) not in (None, "")}
         created = store.add_daily_report(
             report_id=str(payload["id"]),
             report_date=str(payload["report_date"]),
             body=str(payload["body"]),
+            details=details,
         )
         return ("daily_report", str(payload["id"])) if created else ("daily_report-duplicate", str(payload["id"]))
     return None

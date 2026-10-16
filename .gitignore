@@ -1,5 +1,5 @@
 # Private data and secrets: never commit
-data/
+backend/data/
 *.sqlite3
 *.sqlite3-*
 images/
@@ -26,3 +26,7 @@ backend/local_config.json
 client_secret*.json
 client secret*.txt
 *client_secret*
+
+# Frontend build output and dependencies
+frontend/node_modules/
+frontend/dist/
