@@ -18,3 +18,6 @@ __pycache__/
 venv/
 node_modules/
 dist/
+
+# Local Google OAuth settings with real values (never commit)
+backend/local_config.json

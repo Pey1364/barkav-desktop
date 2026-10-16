@@ -1,0 +1,6 @@
+{
+  "google_desktop_client_id": "PASTE-DESKTOP-CLIENT-ID-HERE",
+  "google_desktop_client_secret": "PASTE-DESKTOP-CLIENT-SECRET-HERE",
+  "google_web_client_id": "PASTE-WEB-CLIENT-ID-HERE",
+  "passphrase_env": "BARKAV_FIELD_PASSPHRASE"
+}
