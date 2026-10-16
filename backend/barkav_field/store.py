@@ -36,11 +36,49 @@ CREATE TABLE IF NOT EXISTS seen_remote (
     entry_id TEXT NOT NULL,
     seen_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS review_items (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL CHECK (status IN ('new', 'under_review', 'approved', 'rejected')),
+    title TEXT NOT NULL DEFAULT '',
+    transaction_type TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '',
+    document_kind TEXT CHECK (document_kind IN ('financial', 'non_financial')),
+    note TEXT NOT NULL DEFAULT '',
+    decided_by TEXT,
+    decided_at TEXT,
+    updated_at TEXT NOT NULL
+);
 """
+
+DOCUMENT_KINDS = ("financial", "non_financial")
+DECISIONS = {"approve": "approved", "reject": "rejected"}
+DECIDERS = ("phone", "desktop")
+
+
+class ReviewError(ValueError):
+    """A review step is not allowed in the item's current state, or its data is invalid."""
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _clean_classification(data: dict | None) -> dict | None:
+    """Return the classification fields, or None when the title, type or document kind is missing."""
+    if not data:
+        return None
+    title = str(data.get("title", "")).strip()
+    transaction_type = str(data.get("transaction_type", "")).strip()
+    document_kind = str(data.get("document_kind", "")).strip()
+    if not title or not transaction_type or document_kind not in DOCUMENT_KINDS:
+        return None
+    return {
+        "title": title,
+        "transaction_type": transaction_type,
+        "category": str(data.get("category", "")).strip(),
+        "document_kind": document_kind,
+        "note": str(data.get("note", "")).strip(),
+    }
 
 
 class Store:
@@ -122,3 +160,91 @@ class Store:
                 "INSERT OR IGNORE INTO seen_remote(remote_id, kind, entry_id, seen_at) VALUES(?,?,?,?)",
                 (remote_id, kind, entry_id, _now()),
             )
+
+    # review queue (FD-12) -----------------------------------------------------
+
+    def create_review_item(self, *, item_id: str, classification: dict | None = None) -> bool:
+        """Create the review item for a receipt. It starts under review only if the classification is complete."""
+        values = _clean_classification(classification)
+        with self._connect() as con:
+            if con.execute("SELECT 1 FROM review_items WHERE id=?", (item_id,)).fetchone():
+                return False
+            con.execute(
+                "INSERT INTO review_items(id, status, title, transaction_type, category, document_kind, note, updated_at)"
+                " VALUES(?,?,?,?,?,?,?,?)",
+                (
+                    item_id,
+                    "under_review" if values else "new",
+                    values["title"] if values else "",
+                    values["transaction_type"] if values else "",
+                    values["category"] if values else "",
+                    values["document_kind"] if values else None,
+                    values["note"] if values else "",
+                    _now(),
+                ),
+            )
+        return True
+
+    def classify(
+        self,
+        item_id: str,
+        *,
+        title: str,
+        transaction_type: str,
+        document_kind: str,
+        category: str = "",
+        note: str = "",
+    ) -> None:
+        """Save the wizard answers and move a new or under-review item to under review."""
+        values = _clean_classification(
+            {"title": title, "transaction_type": transaction_type, "document_kind": document_kind,
+             "category": category, "note": note}
+        )
+        if values is None:
+            raise ReviewError("عنوان، نوع تراکنش و نوع سند (مالی یا غیرمالی) لازم است.")
+        with self._connect() as con:
+            row = con.execute("SELECT status FROM review_items WHERE id=?", (item_id,)).fetchone()
+            if row is None:
+                raise ReviewError("ورودی پیدا نشد.")
+            if row["status"] not in ("new", "under_review"):
+                raise ReviewError("این ورودی دیگر قابل ویرایش نیست.")
+            con.execute(
+                "UPDATE review_items SET status='under_review', title=?, transaction_type=?, category=?,"
+                " document_kind=?, note=?, updated_at=? WHERE id=?",
+                (values["title"], values["transaction_type"], values["category"], values["document_kind"],
+                 values["note"], _now(), item_id),
+            )
+
+    def decide(self, item_id: str, *, decision: str, decided_by: str, decided_at: str) -> bool:
+        """Approve or reject an item under review. The first decision wins; a later one returns False."""
+        if decision not in DECISIONS:
+            raise ReviewError("تصمیم نامعتبر است.")
+        if decided_by not in DECIDERS:
+            raise ReviewError("تصمیم‌گیرنده نامعتبر است.")
+        with self._connect() as con:
+            row = con.execute("SELECT status FROM review_items WHERE id=?", (item_id,)).fetchone()
+            if row is None:
+                raise ReviewError("ورودی پیدا نشد.")
+            if row["status"] in ("approved", "rejected"):
+                return False
+            if row["status"] != "under_review":
+                raise ReviewError("ابتدا ورودی باید دسته‌بندی و ثبت شود.")
+            con.execute(
+                "UPDATE review_items SET status=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?",
+                (DECISIONS[decision], decided_by, decided_at, _now(), item_id),
+            )
+        return True
+
+    def list_review_items(self, status: str | None = None) -> list[dict]:
+        sql = (
+            "SELECT id, status, title, transaction_type, category, document_kind, note,"
+            " decided_by, decided_at, updated_at FROM review_items"
+        )
+        args: tuple = ()
+        if status:
+            sql += " WHERE status=?"
+            args = (status,)
+        sql += " ORDER BY updated_at DESC"
+        with self._connect() as con:
+            rows = con.execute(sql, args).fetchall()
+        return [dict(r) for r in rows]

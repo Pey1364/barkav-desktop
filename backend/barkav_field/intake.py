@@ -51,7 +51,19 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
             received_at=str(payload["received_at"]),
             image_bytes=image,
         )
+        # The review item is created with the receipt; a complete classification from the phone puts it under review.
+        store.create_review_item(item_id=str(payload["id"]), classification=payload.get("review"))
         return ("receipt", str(payload["id"])) if created else ("receipt-duplicate", str(payload["id"]))
+    if kind == "review_decision":
+        # A decision made on the phone. If the item is not yet under review, ReviewError is raised
+        # and the file is not marked seen, so the next pull tries it again.
+        changed = store.decide(
+            str(payload["item_id"]),
+            decision=str(payload["decision"]),
+            decided_by="phone",
+            decided_at=str(payload["decided_at"]),
+        )
+        return ("review_decision", str(payload["item_id"])) if changed else ("review_decision-duplicate", str(payload["item_id"]))
     if kind == "daily_report":
         created = store.add_daily_report(
             report_id=str(payload["id"]),

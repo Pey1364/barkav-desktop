@@ -1,20 +1,38 @@
 """FD-03 and FD-04: local read API for the desktop screen and the PWA.
 
 Routes (all under /api/v1):
-    GET /health            status
-    GET /receipts          stored receipts, newest first (no image bytes)
-    GET /daily-reports     stored daily reports, newest first
+    GET  /health                          status
+    GET  /receipts                        stored receipts, newest first (no image bytes)
+    GET  /daily-reports                   stored daily reports, newest first
+    GET  /review-items?status=            review queue (FD-12), optional status filter
+    POST /review-items/{id}/classify      save the wizard answers; moves the item under review
+    POST /review-items/{id}/decision      approve or reject an item under review (desktop)
 
-Entries are created only by the pull (FD-05), never directly through the API.
+Entries are created only by the pull (FD-05), never directly through the API. The review
+routes change only the review state of an existing item; they never create a receipt.
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
-from .store import Store
+from .store import ReviewError, Store
+
+
+class ClassifyBody(BaseModel):
+    title: str
+    transaction_type: str
+    document_kind: str
+    category: str = ""
+    note: str = ""
+
+
+class DecisionBody(BaseModel):
+    decision: str
 
 
 def create_app(data_dir: Path) -> FastAPI:
@@ -33,5 +51,30 @@ def create_app(data_dir: Path) -> FastAPI:
     @app.get("/api/v1/daily-reports")
     def daily_reports() -> list[dict]:
         return app.state.store.list_daily_reports()
+
+    @app.get("/api/v1/review-items")
+    def review_items(status: str | None = None) -> list[dict]:
+        return app.state.store.list_review_items(status)
+
+    @app.post("/api/v1/review-items/{item_id}/classify")
+    def classify(item_id: str, body: ClassifyBody) -> dict:
+        try:
+            app.state.store.classify(item_id, **body.model_dump())
+        except ReviewError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"ok": True}
+
+    @app.post("/api/v1/review-items/{item_id}/decision")
+    def decide(item_id: str, body: DecisionBody) -> dict:
+        try:
+            changed = app.state.store.decide(
+                item_id,
+                decision=body.decision,
+                decided_by="desktop",
+                decided_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            )
+        except ReviewError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"ok": True, "changed": changed}
 
     return app
