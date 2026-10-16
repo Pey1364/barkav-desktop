@@ -143,3 +143,15 @@ def find_or_create_folder(*, http: httpx.Client, token: Callable[[], str], name:
     if not folder_id:
         raise OAuthError("Drive did not return the new folder id")
     return str(folder_id)
+
+
+class DriveOutbox:
+    """Publishes files into the inbox folder (the RemoteOutbox port in outbox.py)."""
+
+    def __init__(self, *, http: httpx.Client, token: Callable[[], str], folder_id: str):
+        self._http = http
+        self._token = token
+        self._folder_id = folder_id
+
+    def upload(self, name: str, content: bytes) -> str:
+        return upload_file(http=self._http, token=self._token, folder_id=self._folder_id, name=name, content=content)

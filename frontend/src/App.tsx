@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CaptureFlow, type CaptureResult } from "./capture/CaptureFlow";
 import { DailyReportSheet, type DailyReport } from "./capture/DailyReportSheet";
-import { STATUS_LABEL, sampleItems, type FieldItem, type ItemStatus } from "./data/sample";
+import { labelOf, sampleItems, type FieldItem, type ItemStatus } from "./data/sample";
 import { accessToken } from "./drive/gis";
 import { CameraIcon, DesktopIcon, GearIcon, ReceiptIcon, ReportIcon } from "./icons";
 import { toFa } from "./lib/digits";
@@ -178,7 +178,9 @@ export function App() {
     try {
       await sendDecision(pass, item.id, decision);
       setItems((current) =>
-        current.map((existing) => (existing.id === item.id ? { ...existing, status: "decided", decision } : existing)),
+        current.map((existing) =>
+          existing.id === item.id ? { ...existing, status: "decided", decision, decidedBy: "phone" } : existing,
+        ),
       );
       setToast(decision === "approve" ? "تأیید از گوشی ارسال شد." : "رد از گوشی ارسال شد.");
     } catch (error) {
@@ -243,7 +245,7 @@ export function App() {
                   <div className="item-body">
                     <strong>{item.caption || "بدون شرح"}</strong>
                     <small>
-                      {toFa(timeOf(item.receivedAt))} · {STATUS_LABEL[item.status]} · {toFa(item.photos)} عکس
+                      {toFa(timeOf(item.receivedAt))} · {labelOf(item)} · {toFa(item.photos)} عکس
                     </small>
                     {item.status === "review" && !sample && (
                       <div className="actions">

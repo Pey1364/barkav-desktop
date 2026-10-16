@@ -20,8 +20,9 @@ from pathlib import Path
 import httpx
 
 from . import oauth
-from .drive import DriveInbox, find_or_create_folder
+from .drive import DriveInbox, DriveOutbox, find_or_create_folder
 from .intake import pull_once
+from .outbox import publish_pending
 from .passphrase import PassphraseError, load_passphrase, save_passphrase
 from .store import Store
 
@@ -90,7 +91,13 @@ def main(argv: list[str] | None = None) -> int:
             folder_id = _folder_id(http, source.access_token)
             inbox = DriveInbox(http=http, token=source.access_token, folder_id=folder_id)
             store = Store(DATA_DIR)
-            report = pull_once(inbox=inbox, store=store, passphrase=_passphrase(env_name))
+            passphrase = _passphrase(env_name)
+            report = pull_once(inbox=inbox, store=store, passphrase=passphrase)
+            published = publish_pending(
+                store=store,
+                outbox=DriveOutbox(http=http, token=source.access_token, folder_id=folder_id),
+                passphrase=passphrase,
+            )
     except (oauth.OAuthError, FileNotFoundError, json.JSONDecodeError) as exc:
         print(f"خطا: {exc}", file=sys.stderr)
         return 1
@@ -103,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"تکراری: {len(report.duplicate)}")
     print(f"نوع ناشناخته: {len(report.unknown_kind)}")
     print(f"ناموفق (رمز یا داده): {len(report.failed)}")
+    print(f"تصمیم‌های منتشرشده برای گوشی: {len(published.sent)}")
+    if published.failed:
+        print(f"منتشر نشد (دوباره امتحان می‌شود): {published.failed}")
     return 0
 
 

@@ -182,8 +182,8 @@ export function DesktopApp() {
       await api.decide(docId, decision);
       setNotice(
         decision === "approve"
-          ? "تأیید شد. این تأیید هنوز سندی را وارد ۱۹.۱.۱ نمی‌کند (FD-08 بعد از انتقال ۱۹.۱.۱)."
-          : "رد شد.",
+          ? "تأیید شد. با اجرای pull به گوشی فرستاده می‌شود. وارد ۱۹.۱.۱ نمی‌شود (FD-08 بعد از انتقال ۱۹.۱.۱)."
+          : "رد شد. با اجرای pull به گوشی فرستاده می‌شود.",
       );
       await load();
     } catch (exception) {

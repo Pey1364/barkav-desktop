@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../src/drive/gis", () => ({ accessToken: async () => "test-access-token" }));
 vi.mock("../src/media/compress", () => ({ compressToJpeg: async () => new Uint8Array([0xff, 0xd8, 1, 2]) }));
 
-import { open } from "../src/crypto/envelope";
+import { open, seal } from "../src/crypto/envelope";
 import { loadInbox, sendClassification, sendDecision, sendDocument, sendReport } from "../src/sync/service";
 
 const PASS = "test-passphrase-1";
@@ -118,6 +118,17 @@ describe("phone sync against Drive", () => {
     const [item] = (await loadInbox(PASS)).items;
 
     expect(item).toMatchObject({ status: "decided", decision: "reject" });
+  });
+
+  it("shows the desktop's published outcome and lets it override the phone's decision", async () => {
+    await sendDocument(PASS, { id: "doc-desk", mode: "detailed", caption: "y", photos: [new File([], "e.jpg")], review: REVIEW });
+    await sendDecision(PASS, "doc-desk", "approve");
+    const folder = drive.folders.get("BARKAV Field Inbox") ?? "";
+    drive.files.set("desk-status", { folder, name: "status.json", bytes: await seal({ kind: "review_status", item_id: "doc-desk", status: "rejected", decided_at: "t" }, PASS) });
+
+    const [item] = (await loadInbox(PASS)).items;
+
+    expect(item).toMatchObject({ status: "decided", decision: "reject", decidedBy: "desktop" });
   });
 
   it("sends the daily report with an ASCII Jalali date and reads its details", async () => {

@@ -10,8 +10,9 @@ export interface FieldItem {
   mode: "quick" | "detailed";
   status: ItemStatus;
   photos: number;
-  /** Set when this phone sent a decision for the item. */
+  /** Set when a decision exists: from this phone, or published by the desktop (it wins). */
   decision?: "approve" | "reject";
+  decidedBy?: "phone" | "desktop";
 }
 
 export const STATUS_LABEL: Record<ItemStatus, string> = {
@@ -25,6 +26,13 @@ export const STATUS_LABEL: Record<ItemStatus, string> = {
 
 function ago(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
+}
+
+/** The label for an item, including who made its decision. */
+export function labelOf(item: FieldItem): string {
+  if (item.status !== "decided") return STATUS_LABEL[item.status];
+  const who = item.decidedBy === "desktop" ? "از دسکتاپ" : "از گوشی ارسال شد";
+  return `${item.decision === "reject" ? "رد شد" : "تأیید شد"} ${who}`;
 }
 
 export function sampleItems(): FieldItem[] {

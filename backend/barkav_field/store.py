@@ -52,6 +52,13 @@ CREATE TABLE IF NOT EXISTS review_items (
     decided_at TEXT,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    sent_at TEXT
+);
 CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
     mode TEXT NOT NULL CHECK (mode IN ('quick', 'detailed')),
@@ -313,7 +320,24 @@ class Store:
                 "UPDATE review_items SET status=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?",
                 (DECISIONS[decision], decided_by, decided_at, _now(), item_id),
             )
+            if decided_by == "desktop":
+                # The phone must learn the outcome: queue it for the next pull to publish.
+                payload = {"kind": "review_status", "item_id": item_id, "status": DECISIONS[decision],
+                           "decided_at": decided_at}
+                con.execute(
+                    "INSERT INTO outbox(kind, payload, created_at) VALUES(?,?,?)",
+                    ("review_status", json.dumps(payload, ensure_ascii=False), _now()),
+                )
         return True
+
+    def pending_outbox(self) -> list[dict]:
+        with self._connect() as con:
+            rows = con.execute("SELECT id, kind, payload FROM outbox WHERE sent_at IS NULL ORDER BY id").fetchall()
+        return [{"id": row["id"], "kind": row["kind"], "payload": json.loads(row["payload"])} for row in rows]
+
+    def mark_outbox_sent(self, outbox_id: int) -> None:
+        with self._connect() as con:
+            con.execute("UPDATE outbox SET sent_at=? WHERE id=?", (_now(), outbox_id))
 
     def get_review_item(self, item_id: str) -> dict | None:
         with self._connect() as con:

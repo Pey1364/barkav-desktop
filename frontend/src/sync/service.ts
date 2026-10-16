@@ -133,6 +133,8 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
   const reports: DailyReport[] = [];
   const classified = new Set<string>();
   const decisions = new Map<string, "approve" | "reject">();
+  // The desktop publishes its own outcome; it is the final word, so it overrides the phone's decision.
+  const desktopOutcomes = new Map<string, "approve" | "reject">();
   let failed = 0;
 
   for (const id of ids) {
@@ -143,6 +145,8 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
       else if (payload.kind === "review_classification") classified.add(String(payload.item_id));
       else if (payload.kind === "review_decision") {
         decisions.set(String(payload.item_id), payload.decision === "reject" ? "reject" : "approve");
+      } else if (payload.kind === "review_status") {
+        desktopOutcomes.set(String(payload.item_id), payload.status === "rejected" ? "reject" : "approve");
       }
     } catch {
       failed += 1;
@@ -151,8 +155,10 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
 
   const items = documents.reverse().map((payload) => {
     const item = itemFrom(payload, classified.has(String(payload.id)));
-    const decision = decisions.get(item.id);
-    return decision ? { ...item, status: "decided" as const, decision } : item;
+    const desktop = desktopOutcomes.get(item.id);
+    if (desktop) return { ...item, status: "decided" as const, decision: desktop, decidedBy: "desktop" as const };
+    const phone = decisions.get(item.id);
+    return phone ? { ...item, status: "decided" as const, decision: phone, decidedBy: "phone" as const } : item;
   });
   return { items, reports: reports.reverse(), failed };
 }

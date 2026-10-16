@@ -58,6 +58,9 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
         # The review item is created with the receipt; a complete classification from the phone puts it under review.
         store.create_review_item(item_id=str(payload["id"]), classification=payload.get("review"))
         return ("receipt", str(payload["id"])) if created else ("receipt-duplicate", str(payload["id"]))
+    if kind == "review_status":
+        # The desktop's own outcome, published for the phone. Nothing to store on the desktop.
+        return ("review_status-duplicate", str(payload["item_id"]))
     if kind == "review_classification":
         # Wizard answers sent from the phone for a quick document. Once the item is decided it is
         # final, so a late classification is ignored (and marked seen) instead of retried forever.
