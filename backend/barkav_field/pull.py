@@ -1,10 +1,11 @@
 """FD-09: command line for sign-in and for pulling new entries from Drive.
 
-    python -m barkav_field.pull signin     one-time sign-in in the browser
-    python -m barkav_field.pull           read new entries into the local database
+    python -m barkav_field.pull signin           one-time sign-in in the browser
+    python -m barkav_field.pull set-passphrase   save the passphrase on this computer (typed here)
+    python -m barkav_field.pull                  read new entries into the local database
 
-The passphrase is read from the environment variable named in local_config.json, or
-typed in when the variable is empty. It is never written to disk.
+The passphrase is taken from the environment variable named in local_config.json, then from
+this computer's Credential Manager (FD-11), and only then typed in. It is never written to a file.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import httpx
 from . import oauth
 from .drive import DriveInbox, find_or_create_folder
 from .intake import pull_once
+from .passphrase import PassphraseError, load_passphrase, save_passphrase
 from .store import Store
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -32,7 +34,9 @@ FOLDER_PATH = DATA_DIR / "drive_folder.json"
 
 def _passphrase(env_name: str) -> str:
     value = os.environ.get(env_name or "BARKAV_FIELD_PASSPHRASE", "")
-    return value or getpass.getpass("عبارت عبور ورودی‌ها: ")
+    if value:
+        return value
+    return load_passphrase() or getpass.getpass("عبارت عبور ورودی‌ها: ")
 
 
 def _folder_id(http: httpx.Client, token) -> str:
@@ -48,8 +52,25 @@ def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="BARKAV Field: sign in and pull entries.")
-    parser.add_argument("command", nargs="?", default="pull", choices=["pull", "signin"])
+    parser.add_argument("command", nargs="?", default="pull", choices=["pull", "signin", "set-passphrase"])
     args = parser.parse_args(argv)
+
+    if args.command == "set-passphrase":
+        first = getpass.getpass("عبارت عبور ورودی‌ها: ")
+        second = getpass.getpass("تکرار عبارت عبور: ")
+        if first != second:
+            print("دو عبارت یکسان نیستند؛ چیزی ذخیره نشد.", file=sys.stderr)
+            return 1
+        try:
+            save_passphrase(first)
+        except PassphraseError as exc:
+            print(f"خطا: {exc}", file=sys.stderr)
+            return 1
+        except Exception as exc:  # the credential store error text is not printed
+            print(f"ذخیره در مخزن رمز ویندوز انجام نشد ({type(exc).__name__}).", file=sys.stderr)
+            return 1
+        print("عبارت عبور روی این رایانه ذخیره شد.")
+        return 0
 
     try:
         settings = oauth.load_settings(CONFIG_PATH)
