@@ -10,8 +10,8 @@ import { toFa } from "./lib/digits";
 import { formatAmount } from "./lib/format";
 import { persianLongDate } from "./lib/persianDate";
 import { clearPassphrase, loadPassphrase, savePassphrase } from "./settings/passphrase";
-import { ConfirmDialog } from "./ui/Confirm";
-import { loadInbox, sendClassification, sendDecision, sendDocument, sendReport } from "./sync/service";
+import { ConfirmAction, ConfirmDialog } from "./ui/Confirm";
+import { loadInbox, sendClassification, sendDecision, sendDelete, sendDocument, sendEdit, sendReport } from "./sync/service";
 
 type Tab = "documents" | "reports" | "settings";
 
@@ -39,6 +39,7 @@ export function App() {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [capture, setCapture] = useState<{ editing: FieldItem | null } | null>(null);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FieldItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -124,32 +125,42 @@ export function App() {
       setProgress("ورود به Google…");
       await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
 
-      if (result.editingId && result.review) {
+      if (result.editingId) {
         const editedId = result.editingId;
         const review = result.review;
+        const caption = result.caption;
+        const isQuickCompletion = items.find((item) => item.id === editedId)?.status === "pending";
         setProgress("رمزنگاری و ارسال…");
-        await withTimeout(sendClassification(pass, editedId, review), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
+        if (isQuickCompletion && review) {
+          await withTimeout(sendClassification(pass, editedId, review), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
+        } else {
+          await withTimeout(sendEdit(pass, editedId, caption, review), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
+        }
         setItems((current) =>
-          current.map((item) =>
-            item.id === editedId
-              ? {
-                  ...item,
-                  status: "review",
-                  review: {
+          current.map((item) => {
+            if (item.id !== editedId) return item;
+            const nextStatus = item.status === "decided" ? item.status : "review";
+            return {
+              ...item,
+              caption,
+              status: nextStatus,
+              review: review
+                ? {
                     title: review.title,
                     method: review.method,
+                    phase: review.phase,
                     eventDate: review.eventDate,
                     amount: review.amount,
                     kind: review.documentKind,
-                  },
-                }
-              : item,
-          ),
+                  }
+                : item.review,
+            };
+          }),
         );
         setCapture(null);
         setDialog({
-          title: "سند تکمیل شد",
-          lines: [`${review.title} · ${review.method}`, "سند برای بازبینی ارسال شد."],
+          title: "تغییرات ذخیره شد",
+          lines: [review ? `${review.title} · ${review.method} · ${review.phase}` : "شرح سند به‌روز شد."],
         });
       } else {
         const id = crypto.randomUUID();
@@ -169,6 +180,7 @@ export function App() {
             ? {
                 title: result.review.title,
                 method: result.review.method,
+                phase: result.review.phase,
                 eventDate: result.review.eventDate,
                 amount: result.review.amount,
                 kind: result.review.documentKind,
@@ -187,7 +199,7 @@ export function App() {
             : {
                 title: "سند ثبت شد",
                 lines: [
-                  `${result.review?.title ?? ""} · ${result.review?.method ?? ""}`,
+                  `${result.review?.title ?? ""} · ${result.review?.method ?? ""} · ${result.review?.phase ?? ""}`,
                   result.review?.amount ? `مبلغ: ${formatAmount(result.review.amount)} ریال` : "",
                   "سند برای بازبینی ارسال شد.",
                 ].filter(Boolean),
@@ -196,6 +208,25 @@ export function App() {
       }
     } catch (error) {
       setToast(`ارسال انجام نشد: ${messageOf(error)}`);
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  async function removeDocument(item: FieldItem) {
+    const pass = requirePassphrase();
+    if (!pass) return;
+    setBusy(true);
+    setProgress("حذف سند…");
+    try {
+      await withTimeout(accessToken(true), SIGN_IN_WAIT_MS, SIGN_IN_FAILED);
+      await withTimeout(sendDelete(pass, item.id), UPLOAD_WAIT_MS, UPLOAD_TOO_SLOW);
+      setItems((current) => current.filter((existing) => existing.id !== item.id));
+      setDeleteTarget(null);
+      setDialog({ title: "سند حذف شد", lines: [item.caption || "سند بدون شرح", "از دسکتاپ هم پاک می‌شود وقتی آن را بخواند."] });
+    } catch (error) {
+      setToast(`حذف انجام نشد: ${messageOf(error)}`);
     } finally {
       setBusy(false);
       setProgress(null);
@@ -277,7 +308,8 @@ export function App() {
             items={items}
             sample={sample}
             busy={busy}
-            onComplete={(item) => setCapture({ editing: item })}
+            onEdit={(item) => setCapture({ editing: item })}
+            onDelete={(item) => setDeleteTarget(item)}
             onDecide={decide}
           />
         </>
@@ -399,6 +431,18 @@ export function App() {
       )}
 
       {dailyOpen && <DailyReportSheet busy={busy} onClose={() => setDailyOpen(false)} onSave={submitDaily} />}
+
+      {deleteTarget && (
+        <ConfirmAction
+          title="حذف سند؟"
+          lines={[deleteTarget.caption || "سند بدون شرح", "سند و عکس‌هایش از همه‌ی جاها حذف می‌شوند. این کار برگشت ندارد."]}
+          confirmLabel="بله، حذف کن"
+          danger
+          busy={busy}
+          onConfirm={() => removeDocument(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       {busy && progress && (
         <div className="toast progress" role="status">

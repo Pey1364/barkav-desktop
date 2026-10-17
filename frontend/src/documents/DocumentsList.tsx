@@ -18,12 +18,13 @@ interface Props {
   /** Example items are shown with no actions. */
   sample: boolean;
   busy: boolean;
-  onComplete: (item: FieldItem) => void;
+  onEdit: (item: FieldItem) => void;
+  onDelete: (item: FieldItem) => void;
   onDecide: (item: FieldItem, decision: "approve" | "reject") => void;
 }
 
-/** The registered documents, filtered by where they are. Tapping an action changes only that item. */
-export function DocumentsList({ items, sample, busy, onComplete, onDecide }: Props) {
+/** The registered documents, filtered by where they are. Each item can be edited, deleted or decided. */
+export function DocumentsList({ items, sample, busy, onEdit, onDelete, onDecide }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const matches = (item: FieldItem, value: Filter) => value === "all" || item.status === value;
   const shown = items.filter((item) => matches(item, filter));
@@ -59,26 +60,32 @@ export function DocumentsList({ items, sample, busy, onComplete, onDecide }: Pro
                 <small>
                   {item.review.title}
                   {item.review.method ? ` · ${item.review.method}` : ""}
+                  {item.review.phase ? ` · ${item.review.phase}` : ""}
                   {item.review.amount ? ` · ${formatAmount(item.review.amount)} ریال` : ""}
                   {item.review.kind ? ` · ${item.review.kind === "financial" ? "سند مالی" : "سند غیرمالی"}` : ""}
                 </small>
               )}
-              {!sample && item.status === "review" && (
-                <div className="actions">
-                  <button className="btn-primary" type="button" disabled={busy} onClick={() => onDecide(item, "approve")}>
-                    تأیید
+              {!sample && (
+                <div className="actions doc-actions">
+                  {item.status === "review" && (
+                    <>
+                      <button className="btn-primary" type="button" disabled={busy} onClick={() => onDecide(item, "approve")}>
+                        تأیید
+                      </button>
+                      <button className="btn-ghost" type="button" disabled={busy} onClick={() => onDecide(item, "reject")}>
+                        رد
+                      </button>
+                    </>
+                  )}
+                  <button className="btn-ghost" type="button" disabled={busy} onClick={() => onEdit(item)}>
+                    {item.status === "pending" ? "تکمیل" : "ویرایش"}
                   </button>
-                  <button className="btn-ghost" type="button" disabled={busy} onClick={() => onDecide(item, "reject")}>
-                    رد
+                  <button className="btn-ghost danger" type="button" disabled={busy} onClick={() => onDelete(item)}>
+                    حذف
                   </button>
                 </div>
               )}
             </div>
-            {!sample && item.status === "pending" && (
-              <button className="btn-ghost" type="button" disabled={busy} onClick={() => onComplete(item)}>
-                تکمیل
-              </button>
-            )}
           </li>
         ))}
       </ul>

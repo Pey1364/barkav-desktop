@@ -7,7 +7,7 @@ vi.mock("../src/drive/gis", () => ({ accessToken: async () => "test-access-token
 vi.mock("../src/media/compress", () => ({ compressToJpeg: async () => new Uint8Array([0xff, 0xd8, 1, 2]) }));
 
 import { open, seal } from "../src/crypto/envelope";
-import { loadInbox, sendClassification, sendDecision, sendDocument, sendReport } from "../src/sync/service";
+import { loadInbox, sendClassification, sendDecision, sendDelete, sendDocument, sendEdit, sendReport } from "../src/sync/service";
 
 const PASS = "test-passphrase-1";
 const REVIEW = { title: "خرید زمین", method: "چک", eventDate: "۱۴۰۵/۰۷/۲۴", amount: "۲۵۰۰۰۰۰۰۰", documentKind: "financial" as const };
@@ -158,5 +158,28 @@ describe("phone sync against Drive", () => {
 
     expect(state.items).toHaveLength(0);
     expect(state.failed).toBe(1);
+  });
+});
+
+describe("phone edit and delete against Drive", () => {
+  const detailed = { title: "هزینه ساخت", method: "چک", phase: "۰۳ - طراحی", eventDate: "۱۴۰۵/۰۷/۲۴", amount: "۱۵۰۰۰۰۰", documentKind: "financial" as const };
+
+  it("shows the phase and applies a later edit of caption and classification", async () => {
+    await sendDocument(PASS, { id: "doc-edit", mode: "detailed", caption: "اولیه", photos: [new File([], "f.jpg")], review: detailed });
+    await sendEdit(PASS, "doc-edit", "شرح تازه", { ...detailed, phase: "۰۴ - کف‌سازی", amount: "۲۰۰۰۰۰۰" });
+
+    const [item] = (await loadInbox(PASS)).items;
+
+    expect(item.caption).toBe("شرح تازه");
+    expect(item.review).toMatchObject({ title: "هزینه ساخت", phase: "۰۴ - کف‌سازی", amount: "2000000" });
+  });
+
+  it("hides a deleted document from the list", async () => {
+    await sendDocument(PASS, { id: "doc-gone", mode: "quick", caption: "حذفی", photos: [new File([], "g.jpg")] });
+    await sendDelete(PASS, "doc-gone");
+
+    const state = await loadInbox(PASS);
+
+    expect(state.items.find((item) => item.id === "doc-gone")).toBeUndefined();
   });
 });

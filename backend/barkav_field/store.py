@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS review_items (
     note TEXT NOT NULL DEFAULT '',
     event_date TEXT NOT NULL DEFAULT '',
     amount TEXT NOT NULL DEFAULT '',
+    phase TEXT NOT NULL DEFAULT '',
     decided_by TEXT,
     decided_at TEXT,
     updated_at TEXT NOT NULL
@@ -72,6 +73,10 @@ CREATE TABLE IF NOT EXISTS document_images (
     image_path TEXT NOT NULL,
     image_sha256 TEXT NOT NULL,
     PRIMARY KEY (document_id, position)
+);
+CREATE TABLE IF NOT EXISTS deleted_documents (
+    id TEXT PRIMARY KEY,
+    deleted_at TEXT NOT NULL
 );
 """
 
@@ -106,6 +111,7 @@ def _clean_classification(data: dict | None) -> dict | None:
         "note": str(data.get("note", "")).strip(),
         "event_date": str(data.get("event_date", "")).strip(),
         "amount": str(data.get("amount", "")).strip(),
+        "phase": str(data.get("phase", "")).strip(),
     }
 
 
@@ -127,7 +133,7 @@ class Store:
         if "details" not in columns:
             con.execute("ALTER TABLE daily_reports ADD COLUMN details TEXT NOT NULL DEFAULT '{}'")
         review_columns = {row["name"] for row in con.execute("PRAGMA table_info(review_items)")}
-        for column in ("event_date", "amount"):
+        for column in ("event_date", "amount", "phase"):
             if column not in review_columns:
                 con.execute(f"ALTER TABLE review_items ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
 
@@ -231,6 +237,75 @@ class Store:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def document_exists(self, document_id: str) -> bool:
+        with self._connect() as con:
+            return con.execute("SELECT 1 FROM documents WHERE id=?", (document_id,)).fetchone() is not None
+
+    def is_deleted(self, document_id: str) -> bool:
+        with self._connect() as con:
+            return con.execute("SELECT 1 FROM deleted_documents WHERE id=?", (document_id,)).fetchone() is not None
+
+    def edit_document(self, document_id: str, *, caption: str | None, review: dict | None, queue_for_phone: bool) -> None:
+        """Change the caption and/or the classification of a stored document. Queues the new state for the phone."""
+        with self._connect() as con:
+            if con.execute("SELECT 1 FROM documents WHERE id=?", (document_id,)).fetchone() is None:
+                raise ReviewError("سند پیدا نشد.")
+            if caption is not None:
+                con.execute("UPDATE documents SET caption=? WHERE id=?", (caption.strip(), document_id))
+        if review is not None:
+            self.classify(
+                document_id,
+                title=str(review.get("title", "")),
+                transaction_type=str(review.get("transaction_type", "")),
+                document_kind=str(review.get("document_kind", "")),
+                category=str(review.get("category", "")),
+                note=str(review.get("note", "")),
+                event_date=str(review.get("event_date", "")),
+                amount=str(review.get("amount", "")),
+                phase=str(review.get("phase", "")),
+            )
+        if queue_for_phone:
+            current = self.get_review_item(document_id)
+            with self._connect() as con:
+                caption_now = con.execute("SELECT caption FROM documents WHERE id=?", (document_id,)).fetchone()["caption"]
+                payload = {
+                    "kind": "document_edit",
+                    "id": document_id,
+                    "caption": caption_now,
+                    "review": {
+                        "title": current["title"] if current else "",
+                        "transaction_type": current["transaction_type"] if current else "",
+                        "phase": current["phase"] if current else "",
+                        "document_kind": current["document_kind"] if current else "",
+                        "event_date": current["event_date"] if current else "",
+                        "amount": current["amount"] if current else "",
+                    },
+                }
+                con.execute(
+                    "INSERT INTO outbox(kind, payload, created_at) VALUES(?,?,?)",
+                    ("document_edit", json.dumps(payload, ensure_ascii=False), _now()),
+                )
+
+    def delete_document(self, document_id: str, *, queue_for_phone: bool) -> bool:
+        """Delete a document, its photos and its review item. The id is remembered, so a late copy is ignored."""
+        with self._connect() as con:
+            existed = con.execute("SELECT 1 FROM documents WHERE id=?", (document_id,)).fetchone() is not None
+            paths = [row["image_path"] for row in con.execute(
+                "SELECT image_path FROM document_images WHERE document_id=?", (document_id,)).fetchall()]
+            con.execute("DELETE FROM document_images WHERE document_id=?", (document_id,))
+            con.execute("DELETE FROM documents WHERE id=?", (document_id,))
+            con.execute("DELETE FROM review_items WHERE id=?", (document_id,))
+            con.execute("INSERT OR REPLACE INTO deleted_documents(id, deleted_at) VALUES(?,?)", (document_id, _now()))
+            if queue_for_phone:
+                payload = {"kind": "document_delete", "id": document_id}
+                con.execute(
+                    "INSERT INTO outbox(kind, payload, created_at) VALUES(?,?,?)",
+                    ("document_delete", json.dumps(payload, ensure_ascii=False), _now()),
+                )
+        for relative in paths:
+            (self.data_dir / relative).unlink(missing_ok=True)
+        return existed
+
     # remote bookkeeping -------------------------------------------------------
 
     def is_seen(self, remote_id: str) -> bool:
@@ -254,7 +329,7 @@ class Store:
                 return False
             con.execute(
                 "INSERT INTO review_items(id, status, title, transaction_type, category, document_kind, note,"
-                " event_date, amount, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                " event_date, amount, phase, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     item_id,
                     "under_review" if values else "new",
@@ -265,6 +340,7 @@ class Store:
                     values["note"] if values else "",
                     values["event_date"] if values else "",
                     values["amount"] if values else "",
+                    values["phase"] if values else "",
                     _now(),
                 ),
             )
@@ -281,11 +357,13 @@ class Store:
         note: str = "",
         event_date: str = "",
         amount: str = "",
+        phase: str = "",
     ) -> None:
         """Save the wizard answers and move a new or under-review item to under review."""
         values = _clean_classification(
             {"title": title, "transaction_type": transaction_type, "document_kind": document_kind,
-             "category": category, "note": note, "event_date": event_date, "amount": amount}
+             "category": category, "note": note, "event_date": event_date, "amount": amount,
+             "phase": phase}
         )
         if values is None:
             raise ReviewError("عنوان، نوع تراکنش و نوع سند (مالی یا غیرمالی) لازم است.")
@@ -297,9 +375,9 @@ class Store:
                 raise ReviewError("این ورودی دیگر قابل ویرایش نیست.")
             con.execute(
                 "UPDATE review_items SET status='under_review', title=?, transaction_type=?, category=?,"
-                " document_kind=?, note=?, event_date=?, amount=?, updated_at=? WHERE id=?",
+                " document_kind=?, note=?, event_date=?, amount=?, phase=?, updated_at=? WHERE id=?",
                 (values["title"], values["transaction_type"], values["category"], values["document_kind"],
-                 values["note"], values["event_date"], values["amount"], _now(), item_id),
+                 values["note"], values["event_date"], values["amount"], values["phase"], _now(), item_id),
             )
 
     def decide(self, item_id: str, *, decision: str, decided_by: str, decided_at: str) -> bool:
@@ -342,7 +420,7 @@ class Store:
     def get_review_item(self, item_id: str) -> dict | None:
         with self._connect() as con:
             row = con.execute(
-                "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount,"
+                "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount, phase,"
                 " decided_by, decided_at, updated_at FROM review_items WHERE id=?",
                 (item_id,),
             ).fetchone()
@@ -350,7 +428,7 @@ class Store:
 
     def list_review_items(self, status: str | None = None) -> list[dict]:
         sql = (
-            "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount,"
+            "SELECT id, status, title, transaction_type, category, document_kind, note, event_date, amount, phase,"
             " decided_by, decided_at, updated_at FROM review_items"
         )
         args: tuple = ()

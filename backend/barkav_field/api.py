@@ -34,6 +34,17 @@ class ClassifyBody(BaseModel):
     note: str = ""
     event_date: str = ""
     amount: str = ""
+    phase: str = ""
+
+
+class EditBody(BaseModel):
+    caption: str = ""
+    title: str
+    transaction_type: str
+    phase: str = ""
+    document_kind: str
+    event_date: str = ""
+    amount: str = ""
 
 
 class DecisionBody(BaseModel):
@@ -56,6 +67,27 @@ def create_app(data_dir: Path) -> FastAPI:
     @app.get("/api/v1/documents")
     def documents() -> list[dict]:
         return app.state.store.list_documents()
+
+    @app.post("/api/v1/documents/{document_id}/edit")
+    def edit_document(document_id: str, body: EditBody) -> dict:
+        review = {
+            "title": body.title,
+            "transaction_type": body.transaction_type,
+            "phase": body.phase,
+            "document_kind": body.document_kind,
+            "event_date": body.event_date,
+            "amount": body.amount,
+        }
+        try:
+            app.state.store.edit_document(document_id, caption=body.caption, review=review, queue_for_phone=True)
+        except ReviewError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"ok": True}
+
+    @app.delete("/api/v1/documents/{document_id}")
+    def delete_document(document_id: str) -> dict:
+        existed = app.state.store.delete_document(document_id, queue_for_phone=True)
+        return {"ok": True, "existed": existed}
 
     @app.get("/api/v1/documents/{document_id}/images/{position}")
     def document_image(document_id: str, position: int) -> FileResponse:

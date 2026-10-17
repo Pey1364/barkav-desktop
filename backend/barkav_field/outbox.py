@@ -28,7 +28,8 @@ def publish_pending(*, store: Store, outbox: RemoteOutbox, passphrase: str) -> P
     for item in store.pending_outbox():
         try:
             sealed = envelope.seal(item["payload"], passphrase)
-            outbox.upload(f"{item['payload']['item_id']}-{item['id']}.json", sealed)
+            name = item["payload"].get("item_id") or item["payload"]["id"]
+            outbox.upload(f"{name}-{item['id']}.json", sealed)
         except Exception:
             # Keep it pending; the next pull tries again. The error text is not printed (it may hold data).
             report.failed += 1

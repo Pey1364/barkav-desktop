@@ -58,6 +58,21 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
         # The review item is created with the receipt; a complete classification from the phone puts it under review.
         store.create_review_item(item_id=str(payload["id"]), classification=payload.get("review"))
         return ("receipt", str(payload["id"])) if created else ("receipt-duplicate", str(payload["id"]))
+    if kind == "document_edit":
+        # A caption or classification changed on the phone. It waits until the document is here.
+        item_id = str(payload["id"])
+        if not store.document_exists(item_id):
+            raise ValueError("document not found yet")
+        current = store.get_review_item(item_id)
+        review = payload.get("review")
+        if current and current["status"] in ("approved", "rejected"):
+            review = None  # a decided item keeps its classification; the caption may still change
+        store.edit_document(item_id, caption=payload.get("caption"), review=review, queue_for_phone=False)
+        return ("document_edit", item_id)
+    if kind == "document_delete":
+        item_id = str(payload["id"])
+        store.delete_document(item_id, queue_for_phone=False)
+        return ("document_delete", item_id)
     if kind == "review_status":
         # The desktop's own outcome, published for the phone. Nothing to store on the desktop.
         return ("review_status-duplicate", str(payload["item_id"]))
@@ -80,6 +95,7 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
             note=str(review.get("note", "")),
             event_date=str(review.get("event_date", "")),
             amount=str(review.get("amount", "")),
+            phase=str(review.get("phase", "")),
         )
         return ("review_classification", item_id)
     if kind == "review_decision":
@@ -93,6 +109,8 @@ def _store_payload(store: Store, payload: dict) -> tuple[str, str] | None:
         )
         return ("review_decision", str(payload["item_id"])) if changed else ("review_decision-duplicate", str(payload["item_id"]))
     if kind == "document":
+        if store.is_deleted(str(payload["id"])):
+            return ("document-duplicate", str(payload["id"]))
         # Photos in order, plus the description; a quick document has no classification yet.
         images = [base64.b64decode(str(item), validate=True) for item in payload["images_b64"]]
         created = store.add_document(

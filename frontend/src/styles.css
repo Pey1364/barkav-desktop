@@ -871,3 +871,31 @@ button {
 .doc-item .item-body small {
   line-height: 1.7;
 }
+
+/* destructive actions */
+.btn-danger {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.btn-ghost.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* the phone's document actions wrap on narrow screens */
+.doc-actions {
+  flex-wrap: wrap;
+}
+
+.doc-actions .btn-ghost,
+.doc-actions .btn-primary {
+  flex: 0 0 auto;
+  width: auto;
+  padding-inline: 14px;
+}

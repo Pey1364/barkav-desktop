@@ -6,6 +6,7 @@ export type ItemStatus = "pending" | "review" | "decided" | "sent" | "waiting" |
 export interface ReviewInfo {
   title: string;
   method: string;
+  phase: string;
   eventDate: string;
   amount: string;
   kind: "financial" | "non_financial" | "";

@@ -21,6 +21,7 @@ export interface ReviewRow {
   note: string;
   event_date: string;
   amount: string;
+  phase: string;
   decided_by: string | null;
   decided_at: string | null;
   updated_at: string;
@@ -40,6 +41,11 @@ export interface ClassifyInput {
   document_kind: "financial" | "non_financial";
   event_date: string;
   amount: string;
+  phase: string;
+}
+
+export interface EditInput extends ClassifyInput {
+  caption: string;
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -48,11 +54,11 @@ async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function postJson(path: string, body: unknown): Promise<unknown> {
+async function send(method: "POST" | "DELETE", path: string, body?: unknown): Promise<unknown> {
   const response = await fetch(`${LOCAL_API}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
     const detail = (await response.json().catch(() => ({}))) as { detail?: string };
@@ -65,7 +71,8 @@ export const api = {
   documents: () => getJson<DocumentRow[]>("/documents"),
   reviews: () => getJson<ReviewRow[]>("/review-items"),
   reports: () => getJson<ReportRow[]>("/daily-reports"),
-  classify: (id: string, input: ClassifyInput) => postJson(`/review-items/${id}/classify`, input),
-  decide: (id: string, decision: "approve" | "reject") => postJson(`/review-items/${id}/decision`, { decision }),
+  edit: (id: string, input: EditInput) => send("POST", `/documents/${id}/edit`, input),
+  remove: (id: string) => send("DELETE", `/documents/${id}`),
+  decide: (id: string, decision: "approve" | "reject") => send("POST", `/review-items/${id}/decision`, { decision }),
   photoUrl: (documentId: string, position: number) => `${LOCAL_API}/documents/${documentId}/images/${position}`,
 };

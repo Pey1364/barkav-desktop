@@ -1,4 +1,4 @@
-// What the phone sends to Google Drive and reads back. Every item is one sealed file in the inbox
+// What the phone sends to Google Drive and reads back. Every change is one sealed file in the inbox
 // folder; the desktop reads the same folder when it opens (FD-05, FD-12, ADR-0006 and ADR-0007).
 import type { DailyReport } from "../capture/DailyReportSheet";
 import { open, seal, toBase64, type Payload } from "../crypto/envelope";
@@ -6,13 +6,15 @@ import type { FieldItem, ReviewInfo } from "../data/sample";
 import { downloadFile, findOrCreateFolder, listFiles, uploadFile } from "../drive/drive";
 import { accessToken } from "../drive/gis";
 import { toAsciiDigits, toFa } from "../lib/digits";
-import { compressToJpeg } from "../media/compress";
 import { plainAmount } from "../lib/format";
+import { compressToJpeg } from "../media/compress";
 
 export interface ReviewInput {
   title: string;
-  /** The payment method is sent as transaction_type, the field the desktop wizard stores. */
+  /** The transaction type, sent as transaction_type (the desktop wizard field). */
   method: string;
+  /** The construction phase, e.g. "۰۳ - طراحی". */
+  phase: string;
   eventDate: string;
   amount: string;
   documentKind: "financial" | "non_financial";
@@ -37,6 +39,7 @@ function reviewPayload(review: ReviewInput): Payload {
   return {
     title: review.title,
     transaction_type: review.method,
+    phase: review.phase,
     event_date: toAsciiDigits(review.eventDate).trim(),
     amount: plainAmount(review.amount),
     document_kind: review.documentKind,
@@ -50,6 +53,7 @@ function reviewFrom(data: unknown): ReviewInfo | undefined {
   return {
     title: String(raw.title ?? ""),
     method: String(raw.transaction_type ?? ""),
+    phase: String(raw.phase ?? ""),
     eventDate: toFa(String(raw.event_date ?? "")),
     amount: String(raw.amount ?? ""),
     kind,
@@ -86,13 +90,22 @@ export async function sendDocument(
   await sendPayload(passphrase, `${draft.id}.json`, payload);
 }
 
-/** Wizard answers for a document that was sent as quick. */
+/** Wizard answers for a quick document that the phone is completing. */
 export async function sendClassification(passphrase: string, itemId: string, review: ReviewInput): Promise<void> {
-  await sendPayload(passphrase, `${crypto.randomUUID()}.json`, {
-    kind: "review_classification",
-    item_id: itemId,
-    review: reviewPayload(review),
-  });
+  await sendEdit(passphrase, itemId, undefined, review);
+}
+
+/** Change a document's caption and/or its classification. The desktop applies the latest change it reads. */
+export async function sendEdit(passphrase: string, itemId: string, caption: string | undefined, review?: ReviewInput): Promise<void> {
+  const payload: Payload = { kind: "document_edit", id: itemId };
+  if (caption !== undefined) payload.caption = caption;
+  if (review) payload.review = reviewPayload(review);
+  await sendPayload(passphrase, `${crypto.randomUUID()}.json`, payload);
+}
+
+/** Delete a document everywhere. The desktop removes it and ignores any later copy of it. */
+export async function sendDelete(passphrase: string, itemId: string): Promise<void> {
+  await sendPayload(passphrase, `${crypto.randomUUID()}.json`, { kind: "document_delete", id: itemId });
 }
 
 /** Approve or reject an item from the phone. The desktop applies the first decision it reads. */
@@ -119,18 +132,18 @@ export async function sendReport(passphrase: string, report: DailyReport): Promi
   });
 }
 
-function itemFrom(payload: Payload, classification: Payload | undefined): FieldItem {
+function itemFrom(payload: Payload, classification: Payload | undefined, edit: Payload | undefined): FieldItem {
   const quick = payload.mode === "quick";
   const images = Array.isArray(payload.images_b64) ? payload.images_b64.length : 0;
-  const review = reviewFrom(classification ?? payload.review);
+  const reviewSource = edit?.review ?? classification ?? payload.review;
   return {
     id: String(payload.id),
-    caption: String(payload.caption ?? ""),
+    caption: String(edit?.caption ?? payload.caption ?? ""),
     receivedAt: String(payload.received_at),
     mode: quick ? "quick" : "detailed",
-    status: quick && !classification && !payload.review ? "pending" : "review",
+    status: quick && !reviewSource ? "pending" : "review",
     photos: images,
-    review,
+    review: reviewFrom(reviewSource),
   };
 }
 
@@ -154,6 +167,8 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
   const documents: Payload[] = [];
   const reports: DailyReport[] = [];
   const classifications = new Map<string, Payload>();
+  const edits = new Map<string, Payload>();
+  const deleted = new Set<string>();
   const decisions = new Map<string, "approve" | "reject">();
   // The desktop publishes its own outcome; it is the final word, so it overrides the phone's decision.
   const desktopOutcomes = new Map<string, "approve" | "reject">();
@@ -166,6 +181,11 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
       else if (payload.kind === "daily_report") reports.push(reportFrom(payload));
       else if (payload.kind === "review_classification") {
         classifications.set(String(payload.item_id), (payload.review ?? {}) as Payload);
+      } else if (payload.kind === "document_edit") {
+        // Files come oldest first, so a later edit replaces an earlier one.
+        edits.set(String(payload.id), payload);
+      } else if (payload.kind === "document_delete") {
+        deleted.add(String(payload.id));
       } else if (payload.kind === "review_decision") {
         decisions.set(String(payload.item_id), payload.decision === "reject" ? "reject" : "approve");
       } else if (payload.kind === "review_status") {
@@ -176,12 +196,16 @@ export async function loadInbox(passphrase: string): Promise<InboxState> {
     }
   }
 
-  const items = documents.reverse().map((payload) => {
-    const item = itemFrom(payload, classifications.get(String(payload.id)));
-    const desktop = desktopOutcomes.get(item.id);
-    if (desktop) return { ...item, status: "decided" as const, decision: desktop, decidedBy: "desktop" as const };
-    const phone = decisions.get(item.id);
-    return phone ? { ...item, status: "decided" as const, decision: phone, decidedBy: "phone" as const } : item;
-  });
+  const items = documents
+    .reverse()
+    .filter((payload) => !deleted.has(String(payload.id)))
+    .map((payload) => {
+      const id = String(payload.id);
+      const item = itemFrom(payload, classifications.get(id), edits.get(id));
+      const desktop = desktopOutcomes.get(id);
+      if (desktop) return { ...item, status: "decided" as const, decision: desktop, decidedBy: "desktop" as const };
+      const phone = decisions.get(id);
+      return phone ? { ...item, status: "decided" as const, decision: phone, decidedBy: "phone" as const } : item;
+    });
   return { items, reports: reports.reverse(), failed };
 }
