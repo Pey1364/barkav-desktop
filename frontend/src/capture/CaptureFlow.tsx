@@ -7,6 +7,7 @@ import { formatJalali, todayJalali } from "../lib/jalali";
 import { CloseIcon } from "../icons";
 import type { ReviewInput } from "../sync/service";
 import { JalaliDatePicker } from "../ui/JalaliDatePicker";
+import { isNativeApp, takePhotoNative } from "../native/camera";
 
 type Step = "photos" | "mode" | "structure" | "title" | "method" | "phase" | "details" | "kind";
 
@@ -130,18 +131,31 @@ export function CaptureFlow({ editing, busy, onClose, onSubmit, onDailyReport }:
                   </button>
                 </div>
               ))}
-              <label className="add-photo">
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(event) => {
-                    addFiles(event.target.files);
-                    event.target.value = "";
+              {isNativeApp() ? (
+                <button
+                  className="add-photo"
+                  type="button"
+                  onClick={async () => {
+                    const photo = await takePhotoNative();
+                    if (photo) setPhotos((current) => [...current, { file: photo, url: URL.createObjectURL(photo) }]);
                   }}
-                />
-                دوربین
-              </label>
+                >
+                  دوربین
+                </button>
+              ) : (
+                <label className="add-photo">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(event) => {
+                      addFiles(event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                  دوربین
+                </label>
+              )}
               <label className="add-photo">
                 <input
                   type="file"

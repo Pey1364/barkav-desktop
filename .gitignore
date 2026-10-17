@@ -30,3 +30,14 @@ client secret*.txt
 # Frontend build output and dependencies
 frontend/node_modules/
 frontend/dist/
+
+# Android build outputs and local machine settings (never commit)
+frontend/android/local.properties
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.idea/
+frontend/android/app/src/main/assets/
+
+# Built APK files (copies of the build output)
+*.apk

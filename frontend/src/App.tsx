@@ -5,6 +5,7 @@ import { DocumentsList } from "./documents/DocumentsList";
 import { sampleItems, type FieldItem } from "./data/sample";
 import { accessToken, preloadGoogle } from "./drive/gis";
 import { CameraIcon, GearIcon, ReceiptIcon, ReportIcon } from "./icons";
+import { isNativeApp } from "./native/camera";
 import { withTimeout } from "./lib/async";
 import { toFa } from "./lib/digits";
 import { formatAmount } from "./lib/format";
@@ -349,9 +350,13 @@ export function App() {
         <>
           <section className="glass settings-card">
             <strong>حساب Google</strong>
-            <p>{connected ? "به Google Drive وصل است." : "هنوز وصل نیست. برای ارسال و خواندن سندها لازم است."}</p>
+            {isNativeApp() ? (
+              <p>در برنامه‌ی اندروید ورود با Google فعلاً کار نمی‌کند؛ Google این ورود را داخل برنامه مسدود می‌کند. از نسخه‌ی گوشی در مرورگر استفاده کن یا منتظر راه‌اندازی سرور شخصی بمان.</p>
+            ) : (
+              <p>{connected ? "به Google Drive وصل است." : "هنوز وصل نیست. برای ارسال و خواندن سندها لازم است."}</p>
+            )}
             <div className="actions">
-              {!connected && (
+              {!connected && !isNativeApp() && (
                 <button className="btn-primary" type="button" onClick={signIn}>
                   ورود با Google
                 </button>

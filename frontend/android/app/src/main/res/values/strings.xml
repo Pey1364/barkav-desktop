@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BARKAV Field</string>
+    <string name="title_activity_main">BARKAV Field</string>
+    <string name="package_name">ir.barkav.field</string>
+    <string name="custom_url_scheme">ir.barkav.field</string>
+</resources>
